@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "py_bash"
+version = "0.1.0"
+description = "Simplify the use of Bash/Shell commands in Python"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "GNU GPLv3 Affero" }
+authors = [
+  { name = "Mark Rogers", email = "github@titanminds.com" },
+]
+keywords = ["bash", "shell", "utils"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "Topic :: Software Development :: Development Tools",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+]
+dependencies = []
+
+[project.optional-dependencies]
+test = [
+  "pytest>=8.0.0",
+  "pytest-cov>=5.0.0",
+]
+dev = [
+  "pre-commit>=3.7.0",
+  "ruff>=0.6.0",
+]
+
+[tool.setuptools.packages.find]
+exclude = ["contrib", "docs", "test*"]
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+addopts = "--cov=py_bash --cov-report=term-missing --cov-report=xml --cov-report=html"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]

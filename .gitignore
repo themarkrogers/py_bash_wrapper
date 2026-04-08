@@ -5,12 +5,14 @@
 .DS_Store
 
 # Python
-venv
+venv/
+py_bash.egg-info
 *.py[cod]
 
 # JetBrains
-.idea
+.idea/
 
 # CI/CD
+htmlcov/
 .coverage
-htmlcov
+coverage.xml

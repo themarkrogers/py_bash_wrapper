@@ -4,24 +4,40 @@
 
 This library simplifies the use of Bash/Shell commands in Python.
 
-## How to Run Unit Tests Locally
+## Development Setup
 
-### Step 1: Setup your virtual environment
+Install `uv` (if needed):
 
-*If you already have a virtual environment configured, you can skip this step*
+* macOS: `brew install uv`
+* Other: `curl -LsSf https://astral.sh/uv/install.sh | sh`
 
+
+Create and sync the project environment:
+
+* `uv sync --extra dev --extra test`
+
+## Run Tests
+
+```bash
+set -euo pipefail
+
+uv sync --extra test
+uv run pytest
 ```
-python3.12 -m venv venv
-source venv/bin/activate
-pip install --upgrade pip
-pip3 install -r requirements.txt --process-dependency-links
-pip3 install pytest pytest-cov coverage2clover
+
+## Lint and Format
+
+```bash
+uv run ruff check .
+uv run ruff format .
 ```
 
-### Step 2: Run unit tests
+## Pre-commit Hooks
 
-*Navigate to the root of this project*
+Install hooks:
 
-```
-pytest --cov-fail-under=100 --cov=py_bash --cov-report=term-missing --cov-report=html test
-```
+* `uv run pre-commit install`
+
+Run against all files:
+
+* `uv run pre-commit run --all-files`

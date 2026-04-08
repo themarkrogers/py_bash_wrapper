@@ -19,9 +19,9 @@ import pwd
 import shutil
 import signal
 import subprocess
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Mapping, Sequence
 
 
 @dataclass(slots=True)
@@ -38,10 +38,10 @@ class CommandResult:
     def ok(self) -> bool:
         return self.exit_code == 0
 
-    def __init__(self, cmd_args = None, command = None, exit_code = None, stdout = None, stderr = None, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, cmd_args=None, command_display=None, exit_code=None, stdout=None, stderr=None) -> None:
+        super().__init__()
         self.args = cmd_args
-        self.command_display = command
+        self.command_display = command_display
         self.exit_code = exit_code
         self.stdout = stdout
         self.stderr = stderr
@@ -191,15 +191,25 @@ def run_command(
 
     try:
         proc = subprocess.run(
-            final_argv, input=input_text, capture_output=True, text=text, cwd=str(cwd) if cwd is not None else None,
-            env=merged_env, timeout=timeout, check=False, preexec_fn=pre_exec_function_to_run_as_user,
+            final_argv,
+            input=input_text,
+            capture_output=True,
+            text=text,
+            cwd=str(cwd) if cwd is not None else None,
+            env=merged_env,
+            timeout=timeout,
+            check=False,
+            preexec_fn=pre_exec_function_to_run_as_user,
         )
     except subprocess.TimeoutExpired as exc:
         raise TimeoutError(f"Command timed out after {timeout}s: {_quote_join(final_argv)}") from exc
 
     result = CommandResult(
-        cmd_args=final_argv, command_display=_quote_join(final_argv), exit_code=proc.returncode,
-        stdout=proc.stdout or "", stderr=proc.stderr or "",
+        cmd_args=final_argv,
+        command_display=_quote_join(final_argv),
+        exit_code=proc.returncode,
+        stdout=proc.stdout or "",
+        stderr=proc.stderr or "",
     )
     if check and not result.ok:
         raise CommandError(f"Command failed with exit code {result.exit_code}: {result.command_display}", result)
@@ -255,12 +265,22 @@ def run_bash(
         command, path_to_shell_executable=path_to_shell_executable, login=login, strict=strict
     )
     result = run_command(
-        bash_argv, env=env, path=path, cwd=cwd, timeout=timeout, input_text=input_text, check=False,
-        inherit_env=inherit_env, user=user,
+        bash_argv,
+        env=env,
+        path=path,
+        cwd=cwd,
+        timeout=timeout,
+        input_text=input_text,
+        check=False,
+        inherit_env=inherit_env,
+        user=user,
     )
     result = CommandResult(
-        cmd_args=result.args, command_display=command, exit_code=result.exit_code,
-        stdout=result.stdout, stderr=result.stderr,
+        cmd_args=result.args,
+        command_display=command,
+        exit_code=result.exit_code,
+        stdout=result.stdout,
+        stderr=result.stderr,
     )
     if check and not result.ok:
         raise CommandError(f"Bash command failed with exit code {result.exit_code}: {command}", result)
