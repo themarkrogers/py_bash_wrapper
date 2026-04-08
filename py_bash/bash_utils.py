@@ -38,14 +38,6 @@ class CommandResult:
     def ok(self) -> bool:
         return self.exit_code == 0
 
-    def __init__(self, cmd_args=None, command_display=None, exit_code=None, stdout=None, stderr=None) -> None:
-        super().__init__()
-        self.args = cmd_args
-        self.command_display = command_display
-        self.exit_code = exit_code
-        self.stdout = stdout
-        self.stderr = stderr
-
 
 class CommandError(RuntimeError):
     """Raised when a command fails and check=True."""
@@ -205,7 +197,7 @@ def run_command(
         raise TimeoutError(f"Command timed out after {timeout}s: {_quote_join(final_argv)}") from exc
 
     result = CommandResult(
-        cmd_args=final_argv,
+        args=final_argv,
         command_display=_quote_join(final_argv),
         exit_code=proc.returncode,
         stdout=proc.stdout or "",
@@ -276,7 +268,7 @@ def run_bash(
         user=user,
     )
     result = CommandResult(
-        cmd_args=result.args,
+        args=result.args,
         command_display=command,
         exit_code=result.exit_code,
         stdout=result.stdout,
