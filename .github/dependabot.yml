@@ -1,0 +1,45 @@
+version: 2
+
+updates:
+  # Python dependencies (works with pyproject.toml even though uv is used)
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+    open-pull-requests-limit: 5
+
+    commit-message:
+      prefix: "deps"
+
+    labels:
+      - "dependencies"
+
+    reviewers:
+      - "themarkrogers"
+
+    groups:
+      python-dependencies:
+        patterns:
+          - "*"
+
+  # GitHub Actions updates
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+    commit-message:
+      prefix: "ci"
+
+    labels:
+      - "github-actions"
+      - "dependencies"
+
+    reviewers:
+      - "themarkrogers"
+
+    groups:
+      github-actions:
+        patterns:
+          - "*"

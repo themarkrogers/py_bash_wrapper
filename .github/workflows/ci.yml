@@ -35,3 +35,6 @@ jobs:
 
       - name: Run tests
         run: make test
+
+      - name: Test building the library
+        run: make build

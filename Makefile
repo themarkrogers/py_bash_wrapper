@@ -6,8 +6,9 @@ install:
 lint:
 	uv run mypy .
 	uv run ruff check .
-	uv run ruff format .
+	uv run ruff format --check .
 lint-fix:
+	uv run mypy .
 	uv run ruff check --fix
 	uv run ruff format .
 pre-commit:
