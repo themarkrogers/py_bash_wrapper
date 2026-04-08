@@ -1,0 +1,308 @@
+"""
+py_bash/bash_utils.py
+
+Reusable helpers for running commands and Bash snippets from Python.
+
+Design goals:
+- Safe default for normal commands: pass argv, no shell.
+- Explicit Bash mode for shell features: pipes, redirects, subshells, etc.
+- Structured result object with stdout, stderr, exit code, and success flag.
+- Optional custom environment / PATH.
+- Optional run-as-user support on Unix:
+  - Preferred: drop privileges directly via preexec_fn when running as root.
+  - Fallback: use sudo if available and allowed.
+- Good errors and type hints.
+"""
+
+import os
+import pwd
+import shutil
+import signal
+import subprocess
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Callable, Mapping, Sequence
+
+
+@dataclass(slots=True)
+class CommandResult:
+    """Structured command result."""
+
+    args: list[str]
+    command_display: str
+    exit_code: int
+    stdout: str
+    stderr: str
+
+    @property
+    def ok(self) -> bool:
+        return self.exit_code == 0
+
+    def __init__(self, cmd_args = None, command = None, exit_code = None, stdout = None, stderr = None, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.args = cmd_args
+        self.command_display = command
+        self.exit_code = exit_code
+        self.stdout = stdout
+        self.stderr = stderr
+
+
+class CommandError(RuntimeError):
+    """Raised when a command fails and check=True."""
+
+    result: CommandResult | None = None
+
+    def __init__(self, message: str, result: CommandResult) -> None:
+        super().__init__(message)
+        self.result = result
+
+
+def _merge_env(
+    env: Mapping[str, str] | None = None,
+    *,
+    path: str | Sequence[str] | None = None,
+    inherit_env: bool = True,
+) -> dict[str, str]:
+    """
+    Build the environment for a subprocess.
+
+    Args:
+        env: Additional / overriding environment variables.
+        path: If provided, sets PATH. Can be a string or a sequence of path entries.
+        inherit_env: If True, start from os.environ. If False, start empty.
+
+    Returns:
+        A new environment dict.
+    """
+    merged_env: dict[str, str] = dict(os.environ) if inherit_env else {}
+    if env:
+        merged_env.update({str(k): str(v) for k, v in env.items()})
+    if path is not None:
+        if isinstance(path, str):
+            merged_env["PATH"] = path
+        else:
+            merged_env["PATH"] = os.pathsep.join(str(p) for p in path)
+    return merged_env
+
+
+def _quote_join(argv: Sequence[str]) -> str:
+    """Human-readable shell-quoted rendering of argv for logs/errors."""
+    return subprocess.list2cmdline(list(argv))
+
+
+def _make_pre_exec_function_to_run_as_user(user: str) -> Callable[[], None]:
+    """
+    Create a preexec_fn that drops privileges to the target user on Unix.
+
+    This only works when the current process has permission to do so,
+    typically when running as root.
+    """
+    pw = pwd.getpwnam(user)
+    target_uid = pw.pw_uid
+    target_gid = pw.pw_gid
+    home = pw.pw_dir
+
+    def _preexec() -> None:
+        os.setgid(target_gid)
+        os.setuid(target_uid)
+        os.environ["HOME"] = home
+
+    return _preexec
+
+
+def _build_bash_command(
+    command: str,
+    *,
+    path_to_shell_executable: str,
+    login: bool,
+    strict: bool,
+) -> list[str]:
+    """
+    Build 'argv' (a.k.a. the shell command) for running a command through Bash.
+
+    Args:
+        login: login=True uses bash -l -c, which can help pick up profile files.
+        strict: strict=True prepends: set -euo pipefail
+    """
+    if strict:
+        script = f"set -euo pipefail\n{command}"
+    else:
+        script = command
+
+    argv: list[str] = [path_to_shell_executable]
+    if login:
+        argv.append("-l")
+    argv.extend(["-c", script])
+    return argv
+
+
+def run_command(
+    argv: Sequence[str],
+    *,
+    env: Mapping[str, str] | None = None,
+    path: str | Sequence[str] | None = None,
+    cwd: str | Path | None = None,
+    timeout: float | None = None,
+    input_text: str | None = None,
+    check: bool = False,
+    text: bool = True,
+    inherit_env: bool = True,
+    user: str | None = None,
+) -> CommandResult:
+    """
+    Run a normal command safely without a shell.
+
+    Use this for commands that do NOT need pipes, redirects, subshells, globbing,
+    shell variables, or other shell syntax.
+
+    Args:
+        argv: Command argv, e.g. ["docker", "inspect", "my-container"].
+        env: Extra environment variables.
+        path: Override PATH.
+        cwd: Working directory.
+        timeout: Timeout in seconds.
+        input_text: Optional stdin text.
+        check: Raise CommandError if exit code != 0.
+        text: Capture text output. Defaults to True.
+        inherit_env: Whether to start from current os.environ.
+        user: Target Unix username to run as. Best-effort; see notes below.
+
+    Returns:
+        CommandResult
+    """
+    if not argv:
+        raise ValueError("argv must not be empty")
+
+    merged_env = _merge_env(env, path=path, inherit_env=inherit_env)
+
+    pre_exec_function_to_run_as_user: Callable[[], None] | None = None
+    final_argv = list(argv)
+
+    if user:
+        if os.name != "posix":
+            raise RuntimeError("user switching is only supported on Unix-like systems")
+        if os.geteuid() == 0:
+            pre_exec_function_to_run_as_user = _make_pre_exec_function_to_run_as_user(user)
+        else:
+            sudo_path = shutil.which("sudo", path=merged_env.get("PATH"))
+            if sudo_path is None:
+                raise RuntimeError("Cannot run as another user: not root and sudo not found in PATH")
+            final_argv = [sudo_path, "-H", "-u", user, "--", *final_argv]
+
+    try:
+        proc = subprocess.run(
+            final_argv, input=input_text, capture_output=True, text=text, cwd=str(cwd) if cwd is not None else None,
+            env=merged_env, timeout=timeout, check=False, preexec_fn=pre_exec_function_to_run_as_user,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise TimeoutError(f"Command timed out after {timeout}s: {_quote_join(final_argv)}") from exc
+
+    result = CommandResult(
+        cmd_args=final_argv, command_display=_quote_join(final_argv), exit_code=proc.returncode,
+        stdout=proc.stdout or "", stderr=proc.stderr or "",
+    )
+    if check and not result.ok:
+        raise CommandError(f"Command failed with exit code {result.exit_code}: {result.command_display}", result)
+    return result
+
+
+def run_bash(
+    command: str,
+    *,
+    env: Mapping[str, str] | None = None,
+    path: str | Sequence[str] | None = None,
+    cwd: str | Path | None = None,
+    timeout: float | None = None,
+    input_text: str | None = None,
+    check: bool = False,
+    inherit_env: bool = True,
+    user: str | None = None,
+    login: bool = False,
+    strict: bool = True,
+    path_to_shell_executable: str = "/bin/bash",
+) -> CommandResult:
+    """
+    Run a real Bash command string.
+
+    Use this when you need shell features such as:
+    - pipes
+    - redirects
+    - subshells: $(...), (...)
+    - globbing
+    - brace expansion
+    - && / || / ; / here-docs
+
+    Args:
+        command: Bash command string.
+        env: Extra environment variables.
+        path: Override PATH.
+        cwd: Working directory.
+        timeout: Timeout in seconds.
+        input_text: Optional stdin text.
+        check: Raise CommandError if exit code != 0.
+        inherit_env: Whether to start from current os.environ.
+        user: Target Unix username to run as.
+        login: Use a login shell (`bash -l -c`) so profile files may be sourced.
+        strict: Prepend `set -euo pipefail`.
+        path_to_shell_executable: Path to bash.
+
+    Returns:
+        CommandResult
+    """
+    if not command.strip():
+        raise ValueError("'command' must not be empty or only whitespace.")
+    bash_argv = _build_bash_command(
+        command, path_to_shell_executable=path_to_shell_executable, login=login, strict=strict
+    )
+    result = run_command(
+        bash_argv, env=env, path=path, cwd=cwd, timeout=timeout, input_text=input_text, check=False,
+        inherit_env=inherit_env, user=user,
+    )
+    result = CommandResult(
+        cmd_args=result.args, command_display=command, exit_code=result.exit_code,
+        stdout=result.stdout, stderr=result.stderr,
+    )
+    if check and not result.ok:
+        raise CommandError(f"Bash command failed with exit code {result.exit_code}: {command}", result)
+    return result
+
+
+def check_result_for_text(
+    result: CommandResult,
+    *,
+    error_substrings: Sequence[str] | None = None,
+    error_predicate: Callable[[str, str], bool] | None = None,
+) -> None:
+    """
+    Raise CommandError if stdout/stderr contain text that your project treats as failure,
+    even when the exit code is 0.
+
+    This replaces brittle ad hoc post-processing logic.
+    """
+    stdout = result.stdout
+    stderr = result.stderr
+    if error_substrings:
+        combined = f"{stdout}\n{stderr}"
+        for error_signal in error_substrings:
+            if error_signal.lower() in combined.lower():
+                raise CommandError(f"Command output contained an error marker: {error_signal}", result)
+    if error_predicate and error_predicate(stdout, stderr):
+        raise CommandError("Command output matched custom error predicate", result)
+
+
+def require_success(result: CommandResult) -> CommandResult:
+    """Raise CommandError if the result is not successful; otherwise return it."""
+    if not result.ok:
+        raise CommandError(f"Command failed with exit code {result.exit_code}: {result.command_display}", result)
+    return result
+
+
+def terminate_process_group(proc: subprocess.Popen[str]) -> None:
+    """
+    Best-effort kill for a process group started with start_new_session=True.
+    Useful if you later add streaming / long-running helpers.
+    """
+    try:
+        os.killpg(proc.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        pass

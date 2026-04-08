@@ -11,7 +11,7 @@ This library simplifies the use of Bash/Shell commands in Python.
 *If you already have a virtual environment configured, you can skip this step*
 
 ```
-python3 -m venv venv
+python3.12 -m venv venv
 source venv/bin/activate
 pip install --upgrade pip
 pip3 install -r requirements.txt --process-dependency-links
