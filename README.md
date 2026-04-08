@@ -4,40 +4,25 @@
 
 This library simplifies the use of Bash/Shell commands in Python.
 
-## Development Setup
+## Initial Setup
 
-Install `uv` (if needed):
+Prerequisites:
 
-* macOS: `brew install uv`
-* Other: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+* Install `uv` (if needed):
+  * macOS: `brew install uv`
+    * If needed, then [install Homebrew](https://brew.sh/)
+  * Other: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+* Install `make` (if needed):
+  * macOS: (built-in)
+  * Other: TBD
+* Install `python3` (if needed):
+  * macOS: `brew install python@3.12` OR `brew install python@3.13` OR `brew install python@3.14`
+  * Other: TBD
 
 
-Create and sync the project environment:
+## Common Operations
 
-* `uv sync --extra dev --extra test`
-
-## Run Tests
-
-```bash
-set -euo pipefail
-
-uv sync --extra test
-uv run pytest
-```
-
-## Lint and Format
-
-```bash
-uv run ruff check .
-uv run ruff format .
-```
-
-## Pre-commit Hooks
-
-Install hooks:
-
-* `uv run pre-commit install`
-
-Run against all files:
-
-* `uv run pre-commit run --all-files`
+* Install project dependencies: `make install`
+* Run Tests: `make test`
+* Format & Lint: `make lint`
+* Format, Lint, and Fix: `make lint-fix`

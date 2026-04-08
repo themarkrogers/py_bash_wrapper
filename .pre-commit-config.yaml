@@ -7,9 +7,12 @@ repos:
       - id: check-yaml
       - id: check-toml
       - id: check-merge-conflict
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.9
+  - repo: local
     hooks:
-      - id: ruff
-        args: ["--fix"]
-      - id: ruff-format
+      - id: make-pre-commit
+        name: make pre-commit
+        entry: make pre-commit
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
