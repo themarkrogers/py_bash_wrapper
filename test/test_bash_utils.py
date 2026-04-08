@@ -13,7 +13,7 @@ class PyBashTest(TestCase):
     def test_command_result_given_zero_exit_code_then_ok_is_true(self) -> None:
         # Given & When
         result = under_test.CommandResult(
-            cmd_args=["echo", "hello"],
+            args=["echo", "hello"],
             command_display="echo hello",
             exit_code=0,
             stdout="hello\n",
@@ -25,7 +25,7 @@ class PyBashTest(TestCase):
     def test_command_result_given_nonzero_exit_code_then_ok_if_false(self) -> None:
         # Given & When
         result = under_test.CommandResult(
-            cmd_args=["false"],
+            args=["false"],
             command_display="false",
             exit_code=1,
             stdout="",
