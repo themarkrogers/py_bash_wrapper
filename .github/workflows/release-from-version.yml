@@ -1,4 +1,4 @@
-name: Tag release from VERSION
+name: Tag and release from VERSION
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: tag-on-version-main
+  group: release-from-version-main
   cancel-in-progress: false
 
 jobs:
@@ -47,3 +47,30 @@ jobs:
           git tag -a "${TAG}" -m "Release ${TAG}"
           git push origin "refs/tags/${TAG}"
           echo "Pushed new tag ${TAG}."
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install build tooling
+        run: python -m pip install --upgrade pip build
+
+      - name: Verify tag matches VERSION
+        run: python scripts/verify_version_matches_tag.py
+
+      - name: Build artifacts
+        run: python -m build
+
+      - name: Create release with generated notes and upload assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          VERSION=$(tr -d ' \t\r\n' < VERSION)
+          TAG="v${VERSION}"
+          gh release create "${TAG}" \
+            dist/*.whl \
+            dist/*.tar.gz \
+            --repo "${GITHUB_REPOSITORY}" \
+            --generate-notes

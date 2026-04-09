@@ -51,13 +51,11 @@ The canonical version string is the repo-root `VERSION` file (which contains no 
 Git tags use a `v` prefix (e.g., `v0.2.0`). Packaging reads `VERSION` via `pyproject.toml` dynamic metadata.
 
 To cut a release: bump `VERSION` on a branch, open a PR, and merge to `main`.
-When `VERSION` changes on `main`, the **Tag release from VERSION** workflow
-(`.github/workflows/tag-on-version.yml`) creates an annotated tag `vX.Y.Z` on that commit and pushes it if that
-tag does not already exist on the remote and no GitHub Release already exists for that same tag.
+When `VERSION` changes on `main`, the **Tag and release from VERSION** workflow
+(`.github/workflows/release-from-version.yml`) creates an annotated tag `vX.Y.Z` on that commit and pushes it if that
+tag does not already exist on the remote and if no GitHub Release already exists for that same tag.
+The same workflow then verifies tag/version consistency, builds the wheel and sdist artifacts, and publishes a GitHub
+Release immediately with auto-generated notes.
 
-When a `v*` tag is pushed, the **Release** workflow (`.github/workflows/release.yml`) builds wheel and sdist artifacts
-and publishes a GitHub Release immediately with auto-generated notes.
-Release creation fails if a release for that tag already exists.
-
-After a tag exists (or locally before pushing), `make version-check-tag` can be run to confirm the current `v*`
-tag matches `VERSION`. CI runs `scripts/verify_version_matches_tag.py` on tag pushes for the same check.
+After a tag exists (or locally before pushing), `make version-check-tag` can be run to confirm the current `v*`tag
+matches `VERSION`. CI runs `scripts/verify_version_matches_tag.py` on tag pushes for the same check.
