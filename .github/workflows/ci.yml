@@ -39,8 +39,8 @@ jobs:
       - name: Run linter
         run: make lint
 
-      - name: Run tests
-        run: make run-tests
-
       - name: Test building the library
         run: make build
+
+      - name: Run tests
+        run: make run-tests-terminal

@@ -329,7 +329,6 @@ wheels = [
 
 [[package]]
 name = "py-bash"
-version = "0.1.0"
 source = { editable = "." }
 
 [package.optional-dependencies]
@@ -341,6 +340,7 @@ dev = [
     { name = "types-setuptools" },
 ]
 test = [
+    { name = "coverage" },
     { name = "pytest" },
     { name = "pytest-cov" },
 ]
@@ -348,6 +348,7 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "build", marker = "extra == 'dev'", specifier = ">=1.0.0" },
+    { name = "coverage", marker = "extra == 'test'", specifier = ">=7.0.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.0.0" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.0.0" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=9.0.0" },

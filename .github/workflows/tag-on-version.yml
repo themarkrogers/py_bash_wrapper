@@ -1,0 +1,43 @@
+name: Tag release from VERSION
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - VERSION
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tag-on-version-main
+  cancel-in-progress: false
+
+jobs:
+  tag-if-missing:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Create and push tag if missing
+        run: |
+          set -euo pipefail
+          VERSION=$(tr -d ' \t\r\n' < VERSION)
+          if [ -z "${VERSION}" ]; then
+            echo "VERSION file is empty" >&2
+            exit 1
+          fi
+          TAG="v${VERSION}"
+          if [ -n "$(git ls-remote --tags origin "refs/tags/${TAG}")" ]; then
+            echo "Tag ${TAG} already exists on origin; nothing to do."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${TAG}" -m "Release ${TAG}"
+          git push origin "refs/tags/${TAG}"
+          echo "Pushed new tag ${TAG}."

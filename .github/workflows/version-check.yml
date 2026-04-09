@@ -1,0 +1,21 @@
+name: Version tag check
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  version-matches:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Verify tag matches VERSION
+        run: python scripts/verify_version_matches_tag.py
