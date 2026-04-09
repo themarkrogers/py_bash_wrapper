@@ -1,3 +1,5 @@
+# Common tasks via `uv` in alphabetical order. Requires uv on PATH; see README.md.
+
 .PHONY: build install lint lint-fix pre-commit run-tests run-tests-terminal version-check-tag version-show
 
 build:

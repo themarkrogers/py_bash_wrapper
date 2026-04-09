@@ -1,3 +1,7 @@
+# When VERSION changes on `main`, do the following:
+# * create semver git tag, verify tag matches VERSION, build artifacts, GitHub Release.
+# For additional info, see `docs/maintainers.md` & `README.md` (Versioning).
+
 name: Tag and release from VERSION
 
 on:

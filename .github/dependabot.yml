@@ -1,3 +1,5 @@
+# Runs Weekly. Checks for outdated python package versions and GitHub Action versions.
+
 version: 2
 
 updates:

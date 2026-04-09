@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Verify that a v* git tag matches the repo VERSION file (CI tag push or local exact tag)."""
+"""Verify that a v* git tag matches the repo VERSION file (CI tag push or local exact tag).
+
+Exit codes:
+- 0: VERSION file is non-empty and matches the tag implied by GITHUB_REF or git exact tag; or no applicable tag (skip).
+- 1: VERSION file is empty, or the git tag version does not match contents in the VERSION file.
+"""
 
 import os
 import re
@@ -21,12 +26,14 @@ def _read_version_file(root: Path) -> str:
     return text.strip()
 
 
+# CI: GITHUB_REF=refs/tags/vX.Y.Z when this runs on a tag push workflow.
 def _tag_from_github_ref() -> str | None:
     ref = os.environ.get("GITHUB_REF", "")
     m = re.match(r"^refs/tags/v(.+)$", ref)
     return m.group(1) if m else None
 
 
+# Local (or fallback): exact tag on HEAD, e.g., v1.2.3 -> 1.2.3.
 def _tag_from_git_exact(root: Path) -> str | None:
     r = subprocess.run(
         ["git", "-C", str(root), "describe", "--tags", "--exact-match", "HEAD"],

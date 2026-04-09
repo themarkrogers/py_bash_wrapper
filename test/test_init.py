@@ -1,4 +1,4 @@
-"""Tests for version fallback logic in `py_bash.__init__`."""
+"""Tests for `_version()` when package metadata is missing (file fallback and unknown sentinel)."""
 
 from unittest.mock import MagicMock, patch
 
@@ -28,6 +28,7 @@ class TestVersionFallback:
         # Given / When
         result = under_test._version()
         # Then
+        # An unreadable VERSION yields this exact sentinel for diagnostics.
         assert result == "0+unknown"
         mock_version.assert_called_once_with("py_bash")
         mock_read_text.assert_called_once()

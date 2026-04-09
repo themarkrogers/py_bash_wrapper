@@ -1,4 +1,4 @@
-"""Small smoke tests that exercise real Bash execution paths."""
+"""POSIX smoke tests that run real Bash via `run_bash` (skipped on non-posix)."""
 
 import os
 

@@ -173,9 +173,12 @@ def run_command(
     if user:
         if os.name != "posix":
             raise RuntimeError("user switching is only supported on Unix-like systems")
+        # Check if user is root
         if os.geteuid() == 0:
+            # If root, then drop privileges in the child.
             pre_exec_function_to_run_as_user = _make_pre_exec_function_to_run_as_user(user)
         else:
+            # If non-root, then prepend sudo when available (policy-dependent).
             sudo_path = shutil.which("sudo", path=merged_env.get("PATH"))
             if sudo_path is None:
                 raise RuntimeError("Cannot run as another user: not root and sudo not found in PATH")
@@ -226,7 +229,7 @@ def run_bash(
     """
     Run a real Bash command string.
 
-    Use this when you need shell features such as:
+    This provides shell features such as:
     - pipes
     - redirects
     - subshells: $(...), (...)
@@ -267,6 +270,7 @@ def run_bash(
         inherit_env=inherit_env,
         user=user,
     )
+    # Show the caller's Bash source in errors/logs; args still reflect the real argv (bash -c script).
     result = CommandResult(
         args=result.args,
         command_display=command,
@@ -286,8 +290,7 @@ def check_result_for_text(
     error_predicate: Callable[[str, str], bool] | None = None,
 ) -> None:
     """
-    Raise CommandError if stdout/stderr contain text that your project treats as failure,
-    even when the exit code is 0.
+    Raise CommandError if stdout/stderr contain any of the error_substrings, even when the exit code is 0.
 
     This replaces brittle ad hoc post-processing logic.
     """
@@ -312,7 +315,6 @@ def require_success(result: CommandResult) -> CommandResult:
 def terminate_process_group(proc: subprocess.Popen[str]) -> None:
     """
     Best-effort kill for a process group started with start_new_session=True.
-    Useful if you later add streaming / long-running helpers.
     """
     try:
         os.killpg(proc.pid, signal.SIGTERM)

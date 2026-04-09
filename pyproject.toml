@@ -1,4 +1,5 @@
-# PEP 621 project metadata. Canonical release version: VERSION file (SemVer); tags use v prefix (e.g. v0.1.0).
+# py_bash -- PEP 621 project definition.
+# Canonical release version: repo-root VERSION (SemVer, no "v"); Git tags use a v prefix. See docs/maintainers.md.
 
 [build-system]
 requires = ["setuptools>=69", "wheel"]
@@ -57,4 +58,9 @@ line-length = 120
 target-version = "py312"
 
 [tool.ruff.lint]
+# E  = pycodestyle errors
+# F  = Pyflakes
+# I  = isort
+# B  = flake8-bugbear
+# UP = pyupgrade
 select = ["E", "F", "I", "B", "UP"]
