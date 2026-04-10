@@ -1,4 +1,4 @@
-"""Unit tests for `py_bash.bash_utils` (see `docs/FEAT-02.md`)."""
+"""Unit tests for `py_bash.bash_utils` (mocked subprocess, timeouts, user/sudo branches, and helpers)."""
 
 import os as real_os
 import signal

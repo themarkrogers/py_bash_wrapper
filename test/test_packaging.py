@@ -1,4 +1,4 @@
-"""Packaging smoke tests for build artifacts and wheel installability."""
+"""Packaging smoke tests: sdist/wheel build and install; `__version__` must match repo VERSION."""
 
 from __future__ import annotations
 
@@ -61,5 +61,5 @@ def test_built_wheel_installs_and_imports_with_expected_version(tmp_path: Path) 
         capture_output=True,
         text=True,
     )
-    # Then
+    # Then -- installed package must report the same string as the canonical VERSION file.
     assert import_result.stdout.strip() == expected_version

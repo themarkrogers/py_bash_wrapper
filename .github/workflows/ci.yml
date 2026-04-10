@@ -1,3 +1,6 @@
+# Runs when branches are merged to `main` (i.e., when `main` updates). Runs for all supported python versions.
+# Process: checkout, install deps, lint, build wheel, smoke-install wheel, run tests. See docs/maintainers.md.
+
 name: CI
 
 on:

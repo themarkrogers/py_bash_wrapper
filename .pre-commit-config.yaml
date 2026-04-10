@@ -1,3 +1,5 @@
+# Local git hook: This local hook runs `make pre-commit (Ruff check/format check and pytest). See docs/code_style.md.
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0

@@ -1,13 +1,9 @@
-.PHONY: version-show version-check-tag
+# Common tasks via `uv` in alphabetical order. Requires uv on PATH; see README.md.
+
+.PHONY: build install lint lint-fix pre-commit run-tests run-tests-terminal version-check-tag version-show
 
 build:
 	uv run python -m build
-
-version-show:
-	@tr -d '\r\n' < VERSION && echo
-
-version-check-tag:
-	uv run python scripts/verify_version_matches_tag.py
 
 install:
 	uv sync --extra dev --extra test
@@ -33,3 +29,9 @@ run-tests:
 
 run-tests-terminal:
 	uv run pytest --cov=py_bash --cov-report=term-missing
+
+version-check-tag:
+	uv run python scripts/verify_version_matches_tag.py
+
+version-show:
+	@tr -d '\r\n' < VERSION && echo
