@@ -39,7 +39,7 @@ The argument **`check=True`** will cause failures to raise a **`CommandError`**.
 - [Project structure](docs/project_structure.md) -- where code, tests, and automation live.
 - [Code style](docs/code_style.md) -- Ruff, Mypy, pytest, and conventions.
 - [Maintainers](docs/maintainers.md) -- versions, CI, releases, security notes for shell APIs.
-- [Plan / roadmap](docs/PLAN.md) -- prioritized follow-on work.
+- [Plan / roadmap](docs/plan.md) -- upcoming tasks.
 
 Full API details live in docstrings under `py_bash/bash_utils.py` and in the usage doc above.
 

@@ -1,0 +1,15 @@
+---
+description: General writing and formatting rules for punctuation and line length
+alwaysApply: true
+---
+
+# Writing & Formatting Rules
+
+- Always prefer straight double quotes `"` over curly quotes `“”`
+- Always prefer straight single quotes `'` over curly apostrophes `’`
+- Always prefer three dots `...` over the ellipsis character `…`
+- Always prefer two hyphens '--' over the em dash '—'
+- Always prefer a hyphen '-' over the en dash '–'
+- Always follow "e.g." and "i.e." with a comma (e.g., like this)
+- Maximum line length is 120 characters (excluding markdown tables)
+- Always end files with a newline
