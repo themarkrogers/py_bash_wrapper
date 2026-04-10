@@ -21,7 +21,7 @@
 
 # Py Bash Wrapper
 
-![Logo](assets/py_bash_wrapper-logo.png)
+![Logo](https://github.com/themarkrogers/py_bash_wrapper/blob/main/assets/py_bash_wrapper-logo.png)
 
 ## Description
 
@@ -44,18 +44,18 @@ pip install py_bash_wrapper
 
 ## Documentation
 
-- [Usage examples](docs/usage_examples.md) -- safe patterns, `run_command` vs. `run_bash`, errors and post-checks.
-- [Project structure](docs/project_structure.md) -- where code, tests, and automation live.
-- [Code style](docs/code_style.md) -- Ruff, Mypy, pytest, and conventions.
-- [Maintainers](docs/maintainers.md) -- versions, CI, releases, security notes for shell APIs.
-- [Plan / roadmap](docs/plan.md) -- upcoming tasks.
+- [Usage examples](https://github.com/themarkrogers/py_bash_wrapper/blob/main/docs/usage_examples.md) -- safe patterns, `run_command` vs. `run_bash`, errors and post-checks.
+- [Project structure](https://github.com/themarkrogers/py_bash_wrapper/blob/main/docs/project_structure.md) -- where code, tests, and automation live.
+- [Code style](https://github.com/themarkrogers/py_bash_wrapper/blob/main/docs/code_style.md) -- Ruff, Mypy, pytest, and conventions.
+- [Maintainers](https://github.com/themarkrogers/py_bash_wrapper/blob/main/docs/maintainers.md) -- versions, CI, releases, security notes for shell APIs.
+- [Plan / roadmap](https://github.com/themarkrogers/py_bash_wrapper/blob/main/docs/plan.md) -- upcoming tasks.
 
 Full API details live in docstrings under `py_bash_wrapper/bash_utils.py` and in the usage doc above.
 
 ## Security note
 
 **`run_bash` executes shell code.** Do not pass untrusted input as the Bash command string. Prefer **`run_command`**
-with a fixed argv when shell features are not required. See [docs/usage_examples.md](docs/usage_examples.md).
+with a fixed argv when shell features are not required. See [docs/usage_examples.md](https://github.com/themarkrogers/py_bash_wrapper/blob/main/docs/usage_examples.md).
 
 ## Quick start
 
@@ -87,7 +87,7 @@ Prerequisites:
   * macOS: Xcode Command Line Tools or a build toolchain that provides `make`.
   * Linux: install `build-essential`.
   * Windows: use Git Bash, WSL, or another environment that provides `make`, or run the same `uv run ...` commands from
-    the [Makefile](Makefile) by hand.
+    the [Makefile](https://github.com/themarkrogers/py_bash_wrapper/blob/main/Makefile) by hand.
 * **Python 3.12+**: install via OS package manager, via `uv` with `uv python install 3.12`, or via
   [python.org](https://www.python.org/downloads/).
 
@@ -115,7 +115,7 @@ When `VERSION` changes on `main`, the **Tag and release from VERSION** workflow
 not already exist on the remote, and if no GitHub Release already exists for that same tag, then the workflow pushes it.
 The same workflow then verifies tag/version consistency, builds the wheel and sdist artifacts, publishes a GitHub
 Release immediately with auto-generated notes, and uploads the same artifacts to PyPI (Trusted Publishing; GitHub
-environment `pypi`). Configure the publisher in PyPI before the first upload; see [docs/maintainers.md](docs/maintainers.md).
+environment `pypi`). Configure the publisher in PyPI before the first upload; see [docs/maintainers.md](https://github.com/themarkrogers/py_bash_wrapper/blob/main/docs/maintainers.md).
 
 After a tag exists (or locally before pushing), `make version-check-tag` can be run to confirm the current `v*` tag
 matches `VERSION`. CI runs `scripts/verify_version_matches_tag.py` on tag pushes for the same check.
