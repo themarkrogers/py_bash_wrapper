@@ -14,14 +14,25 @@ Operational context for merging, releasing, and reviewing changes. User-facing s
 ## Release path
 
 - The high-level flow: bump `VERSION` on a branch, merge to `main`, then the
-  [Tag and release from VERSION workflow](`.github/workflows/release-from-version.yml`) creates the tag and GitHub
-  Release when appropriate.
-- See more details in [README.md](../README.md) (§ Versioning)
+  [Tag and release from VERSION workflow](../.github/workflows/release-from-version.yml) creates the tag, GitHub
+  Release, and PyPI upload when appropriate.
+- See more details in [README.md](../README.md) (Versioning).
+
+## PyPI publishing
+
+Releases upload to [PyPI](https://pypi.org/project/py_bash/).
+
+**Workflow and environment**
+
+- Triggered on all pushes to `main`.
+- GHA Workflow file: `.github/workflows/release-from-version.yml`.
+- Job: `publish-pypi` uses GitHub environment **`pypi`**. Create that environment under the repository
+  **Settings > Environments** if it does not exist yet. Optional: add required reviewers or wait timers for extra safety.
 
 ## CI
 
 - **`.github/workflows/ci.yml`** runs on pushes to `main` and on pull requests: install via `make install`, `make lint`,
-  `make build`, smoke-install the wheel in a clean venv, then `make run-tests-terminal`.
+  `make build`, `twine check` on `dist/*`, smoke-install the wheel in a clean venv, then `make run-tests-terminal`.
 - Failures there should be treated as merge blockers unless explicitly waived with a documented reason.
 
 ## Dependabot

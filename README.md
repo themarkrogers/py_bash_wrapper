@@ -3,8 +3,8 @@
 [![GitHub license][#agpl-v3]][#license-gh-package]
 [![Unit Tests][#ci-badge-img]][#ci-workflow]
 [![Project Status][#status-active]][#status-licenses]
-<!-- [![PyPI - Python Version][#pypi-project-python-version]][#pypi-package] -->
-<!-- [![PyPI][#pypi-project-version]][#pypi-package] -->
+[![PyPI - Python Version][#pypi-project-python-version]][#pypi-package]
+[![PyPI][#pypi-project-version]][#pypi-package]
 
 [#agpl-v3]: https://img.shields.io/badge/License-AGPLv3-blue.svg
 [#ci-badge-img]: https://github.com/themarkrogers/py_bash/actions/workflows/ci.yml/badge.svg
@@ -32,6 +32,14 @@
 
 Results come back as **`CommandResult`** with stdout, stderr, exit code, and an **`ok`** flag;
 The argument **`check=True`** will cause failures to raise a **`CommandError`**.
+
+## Installation
+
+From [PyPI](https://pypi.org/project/py_bash/):
+
+```bash
+pip install py_bash
+```
 
 ## Documentation
 
@@ -104,8 +112,9 @@ To cut a release: bump `VERSION` on a branch, open a PR, and merge to `main`.
 When `VERSION` changes on `main`, the **Tag and release from VERSION** workflow
 (`.github/workflows/release-from-version.yml`) creates an annotated tag `vX.Y.Z` on that commit. Then, if that tag does
 not already exist on the remote, and if no GitHub Release already exists for that same tag, then the workflow pushes it.
-The same workflow then verifies tag/version consistency, builds the wheel and sdist artifacts, and publishes a GitHub
-Release immediately with auto-generated notes.
+The same workflow then verifies tag/version consistency, builds the wheel and sdist artifacts, publishes a GitHub
+Release immediately with auto-generated notes, and uploads the same artifacts to PyPI (Trusted Publishing; GitHub
+environment `pypi`). Configure the publisher in PyPI before the first upload; see [docs/maintainers.md](docs/maintainers.md).
 
 After a tag exists (or locally before pushing), `make version-check-tag` can be run to confirm the current `v*` tag
 matches `VERSION`. CI runs `scripts/verify_version_matches_tag.py` on tag pushes for the same check.

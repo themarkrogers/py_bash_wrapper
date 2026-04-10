@@ -7,7 +7,7 @@ directory is part of the installable package.
 
 | Path                 | Role                                                                                     |
 |----------------------|------------------------------------------------------------------------------------------|
-| `.github/workflows/` | CI (`ci.yml`) and release automation (`release-from-version.yml`).                       |
+| `.github/workflows/` | CI (`ci.yml`); release + PyPI publish (`release-from-version.yml`, Trusted Publishing).  |
 | `assets/`            | Static assets such as the logo referenced from the README.                               |
 | `docs/`              | Project documentation (planning, style, this file). Not included in the published wheel. |
 | `py_bash/`           | Library package: public API (e.g., `run_command`, `run_bash`, `CommandResult`).          |

@@ -11,7 +11,7 @@ dynamic = ["version"]
 description = "Simplify the use of Bash/Shell commands in Python"
 readme = "README.md"
 requires-python = ">=3.12"
-license = { text = "GNU GPLv3 Affero" }
+license = "AGPL-3.0-only"
 authors = [
   { name = "Mark Rogers", email = "github@titanminds.com" },
 ]
@@ -25,6 +25,11 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/themarkrogers/py_bash"
+Repository = "https://github.com/themarkrogers/py_bash"
+Issues = "https://github.com/themarkrogers/py_bash/issues"
 
 [tool.setuptools.dynamic]
 version = { file = "VERSION" }
@@ -40,6 +45,7 @@ dev = [
   "mypy>=1.0.0",
   "pre-commit>=4.0.0",
   "ruff>=0.11.0",
+  "twine>=6.0.0",
   "types-setuptools>=82.0.0.0",
 ]
 

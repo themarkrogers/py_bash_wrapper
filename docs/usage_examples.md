@@ -3,6 +3,20 @@
 Copy-paste patterns for the public API in `py_bash.bash_utils`. Signatures and edge cases are fully documented in the
 source docstrings; this page focuses on **safe defaults** and common flows.
 
+## Install from PyPI
+
+```bash
+pip install py_bash
+```
+
+```python
+from py_bash.bash_utils import run_command
+
+print(run_command(["echo", "hello"], check=True).stdout)
+```
+
+For a development checkout, see [README.md](../README.md) (Initial setup).
+
 ## Prefer `run_command` (no shell)
 
 Use a fixed argument list when you do not need pipes, redirects, globbing, or other shell syntax. This avoids shell
