@@ -11,7 +11,8 @@ This project uses a small, enforced toolchain. For day-to-day commands, see [REA
 
 ## Types and public API
 
-- Public functions and methods should have **type hints** consistent with existing code in `py_bash/bash_utils.py`.
+- Public functions and methods should have **type hints** consistent with existing code in
+  `py_bash_wrapper/bash_utils.py`.
 - **Docstrings** for public API: use the same style as `bash_utils.py` (summary, `Args`/`Returns` where helpful).
 
 ## Code

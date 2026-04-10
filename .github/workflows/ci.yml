@@ -45,11 +45,14 @@ jobs:
       - name: Test building the library
         run: make build
 
+      - name: Check package metadata (twine)
+        run: uv run python -m twine check dist/*
+
       - name: Install built wheel in clean venv
         run: |
           python -m venv .venv-smoke
           .venv-smoke/bin/python -m pip install dist/*.whl
-          .venv-smoke/bin/python -c "import py_bash; print(py_bash.__version__)"
+          .venv-smoke/bin/python -c "import py_bash_wrapper; print(py_bash_wrapper.__version__)"
 
       - name: Run tests
         run: make run-tests-terminal

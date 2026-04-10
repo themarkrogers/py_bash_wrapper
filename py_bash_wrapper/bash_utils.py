@@ -1,5 +1,5 @@
 """
-py_bash/bash_utils.py
+py_bash_wrapper/bash_utils.py
 
 Reusable helpers for running commands and Bash snippets from Python.
 
@@ -16,6 +16,7 @@ Design goals:
 
 import os
 import pwd
+import shlex
 import shutil
 import signal
 import subprocess
@@ -128,85 +129,31 @@ def _build_bash_command(
     return argv
 
 
-def run_command(
-    argv: Sequence[str],
+def check_result_for_text(
+    result: CommandResult,
     *,
-    env: Mapping[str, str] | None = None,
-    path: str | Sequence[str] | None = None,
-    cwd: str | Path | None = None,
-    timeout: float | None = None,
-    input_text: str | None = None,
-    check: bool = False,
-    text: bool = True,
-    inherit_env: bool = True,
-    user: str | None = None,
-) -> CommandResult:
+    error_substrings: Sequence[str] | None = None,
+    error_predicate: Callable[[str, str], bool] | None = None,
+) -> None:
     """
-    Run a normal command safely without a shell.
+    Raise CommandError if stdout/stderr contain any of the error_substrings, even when the exit code is 0.
 
-    Use this for commands that do NOT need pipes, redirects, subshells, globbing,
-    shell variables, or other shell syntax.
-
-    Args:
-        argv: Command argv, e.g. ["docker", "inspect", "my-container"].
-        env: Extra environment variables.
-        path: Override PATH.
-        cwd: Working directory.
-        timeout: Timeout in seconds.
-        input_text: Optional stdin text.
-        check: Raise CommandError if exit code != 0.
-        text: Capture text output. Defaults to True.
-        inherit_env: Whether to start from current os.environ.
-        user: Target Unix username to run as. Best-effort; see notes below.
-
-    Returns:
-        CommandResult
+    This replaces brittle ad hoc post-processing logic.
     """
-    if not argv:
-        raise ValueError("argv must not be empty")
+    stdout = result.stdout
+    stderr = result.stderr
+    if error_substrings:
+        combined = f"{stdout}\n{stderr}"
+        for error_signal in error_substrings:
+            if error_signal.lower() in combined.lower():
+                raise CommandError(f"Command output contained an error marker: {error_signal}", result)
+    if error_predicate and error_predicate(stdout, stderr):
+        raise CommandError("Command output matched custom error predicate", result)
 
-    merged_env = _merge_env(env, path=path, inherit_env=inherit_env)
 
-    pre_exec_function_to_run_as_user: Callable[[], None] | None = None
-    final_argv = list(argv)
-
-    if user:
-        if os.name != "posix":
-            raise RuntimeError("user switching is only supported on Unix-like systems")
-        # Check if user is root
-        if os.geteuid() == 0:
-            # If root, then drop privileges in the child.
-            pre_exec_function_to_run_as_user = _make_pre_exec_function_to_run_as_user(user)
-        else:
-            # If non-root, then prepend sudo when available (policy-dependent).
-            sudo_path = shutil.which("sudo", path=merged_env.get("PATH"))
-            if sudo_path is None:
-                raise RuntimeError("Cannot run as another user: not root and sudo not found in PATH")
-            final_argv = [sudo_path, "-H", "-u", user, "--", *final_argv]
-
-    try:
-        proc = subprocess.run(
-            final_argv,
-            input=input_text,
-            capture_output=True,
-            text=text,
-            cwd=str(cwd) if cwd is not None else None,
-            env=merged_env,
-            timeout=timeout,
-            check=False,
-            preexec_fn=pre_exec_function_to_run_as_user,
-        )
-    except subprocess.TimeoutExpired as exc:
-        raise TimeoutError(f"Command timed out after {timeout}s: {_quote_join(final_argv)}") from exc
-
-    result = CommandResult(
-        args=final_argv,
-        command_display=_quote_join(final_argv),
-        exit_code=proc.returncode,
-        stdout=proc.stdout or "",
-        stderr=proc.stderr or "",
-    )
-    if check and not result.ok:
+def require_success(result: CommandResult) -> CommandResult:
+    """Raise CommandError if the result is not successful; otherwise return it."""
+    if not result.ok:
         raise CommandError(f"Command failed with exit code {result.exit_code}: {result.command_display}", result)
     return result
 
@@ -283,31 +230,91 @@ def run_bash(
     return result
 
 
-def check_result_for_text(
-    result: CommandResult,
+def run_command(
+    command: str | Sequence[str],
     *,
-    error_substrings: Sequence[str] | None = None,
-    error_predicate: Callable[[str, str], bool] | None = None,
-) -> None:
+    env: Mapping[str, str] | None = None,
+    path: str | Sequence[str] | None = None,
+    cwd: str | Path | None = None,
+    timeout: float | None = None,
+    input_text: str | None = None,
+    check: bool = False,
+    text: bool = True,
+    inherit_env: bool = True,
+    user: str | None = None,
+) -> CommandResult:
     """
-    Raise CommandError if stdout/stderr contain any of the error_substrings, even when the exit code is 0.
+    Run a normal command safely without a shell.
 
-    This replaces brittle ad hoc post-processing logic.
+    Use this for commands that do NOT need pipes, redirects, subshells, globbing,
+    shell variables, or other shell syntax.
+
+    Args:
+        command: Command argv, e.g., either "docker inspect my-container" or ["docker", "inspect", "my-container"].
+        env: Extra environment variables.
+        path: Override PATH.
+        cwd: Working directory.
+        timeout: Timeout in seconds.
+        input_text: Optional stdin text.
+        check: Raise CommandError if exit code != 0.
+        text: Capture text output. Defaults to True.
+        inherit_env: Whether to start from the current os.environ.
+        user: Target Unix username to run as. Best-effort; see notes below.
+
+    Returns:
+        CommandResult
     """
-    stdout = result.stdout
-    stderr = result.stderr
-    if error_substrings:
-        combined = f"{stdout}\n{stderr}"
-        for error_signal in error_substrings:
-            if error_signal.lower() in combined.lower():
-                raise CommandError(f"Command output contained an error marker: {error_signal}", result)
-    if error_predicate and error_predicate(stdout, stderr):
-        raise CommandError("Command output matched custom error predicate", result)
+    if not command:
+        raise ValueError("command must not be empty")
+    if isinstance(command, str):
+        argv: Sequence[str] = shlex.split(command)
+    elif isinstance(command, Sequence) and all(isinstance(arg, str) for arg in command):
+        argv = command
+    else:
+        raise ValueError("command must be either a `str` or a `Sequence[str]`")
 
+    merged_env = _merge_env(env, path=path, inherit_env=inherit_env)
 
-def require_success(result: CommandResult) -> CommandResult:
-    """Raise CommandError if the result is not successful; otherwise return it."""
-    if not result.ok:
+    pre_exec_function_to_run_as_user: Callable[[], None] | None = None
+    final_argv = list(argv)
+
+    if user:
+        if os.name != "posix":
+            raise RuntimeError("user switching is only supported on Unix-like systems")
+        # Check if user is root
+        if os.geteuid() == 0:
+            # If root, then drop privileges in the child.
+            pre_exec_function_to_run_as_user = _make_pre_exec_function_to_run_as_user(user)
+        else:
+            # If non-root, then prepend sudo when available (policy-dependent).
+            sudo_path = shutil.which("sudo", path=merged_env.get("PATH"))
+            if sudo_path is None:
+                raise RuntimeError("Cannot run as another user: not root and sudo not found in PATH")
+            final_argv = [sudo_path, "-H", "-u", user, "--", *final_argv]
+
+    try:
+        proc = subprocess.run(
+            final_argv,
+            input=input_text,
+            capture_output=True,
+            text=text,
+            cwd=str(cwd) if cwd is not None else None,
+            env=merged_env,
+            timeout=timeout,
+            check=False,
+            preexec_fn=pre_exec_function_to_run_as_user,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise TimeoutError(f"Command timed out after {timeout}s: {_quote_join(final_argv)}") from exc
+
+    result = CommandResult(
+        args=final_argv,
+        command_display=_quote_join(final_argv),
+        exit_code=proc.returncode,
+        stdout=proc.stdout or "",
+        stderr=proc.stderr or "",
+    )
+    if check and not result.ok:
         raise CommandError(f"Command failed with exit code {result.exit_code}: {result.command_display}", result)
     return result
 

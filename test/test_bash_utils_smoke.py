@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-import py_bash.bash_utils as under_test
+import py_bash_wrapper.bash_utils as under_test
 
 pytestmark = pytest.mark.skipif(os.name != "posix", reason="Smoke tests require a posix shell")
 

@@ -2,7 +2,7 @@
 
 from unittest.mock import MagicMock, patch
 
-import py_bash as under_test
+import py_bash_wrapper as under_test
 
 
 class TestVersionFallback:
@@ -17,7 +17,7 @@ class TestVersionFallback:
         result = under_test._version()
         # Then
         assert result == "1.2.3"
-        mock_version.assert_called_once_with("py_bash")
+        mock_version.assert_called_once_with("py_bash_wrapper")
         mock_read_text.assert_called_once()
 
     @patch("pathlib.Path.read_text", autospec=True, side_effect=OSError("cannot read file"))
@@ -30,5 +30,5 @@ class TestVersionFallback:
         # Then
         # An unreadable VERSION yields this exact sentinel for diagnostics.
         assert result == "0+unknown"
-        mock_version.assert_called_once_with("py_bash")
+        mock_version.assert_called_once_with("py_bash_wrapper")
         mock_read_text.assert_called_once()

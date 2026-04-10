@@ -1,6 +1,5 @@
-# When VERSION changes on `main`, do the following:
-# * create semver git tag, verify tag matches VERSION, build artifacts, GitHub Release.
-# For additional info, see `docs/maintainers.md` & `README.md` (Versioning).
+# When VERSION changes on `main`: create semver git tag if missing, verify tag matches VERSION, build artifacts,
+# GitHub Release, then publish sdist and wheel to PyPI (Trusted Publishing). See docs/maintainers.md & README.md.
 
 name: Tag and release from VERSION
 
@@ -13,13 +12,14 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 concurrency:
   group: release-from-version-main
   cancel-in-progress: false
 
 jobs:
-  tag-if-missing:
+  build-and-release:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -78,3 +78,27 @@ jobs:
             dist/*.tar.gz \
             --repo "${GITHUB_REPOSITORY}" \
             --generate-notes
+
+      - name: Upload distribution artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+
+  publish-pypi:
+    needs: build-and-release
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - name: Download distribution artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
