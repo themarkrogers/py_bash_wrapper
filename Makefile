@@ -25,10 +25,10 @@ pre-commit:
 	uv run pytest
 
 run-tests:
-	uv run pytest --cov=py_bash --cov-report=html
+	uv run pytest --cov=py_bash_wrapper --cov-report=html
 
 run-tests-terminal:
-	uv run pytest --cov=py_bash --cov-report=term-missing
+	uv run pytest --cov=py_bash_wrapper --cov-report=term-missing
 
 version-check-tag:
 	uv run python scripts/verify_version_matches_tag.py

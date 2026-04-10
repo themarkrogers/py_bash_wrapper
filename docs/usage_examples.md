@@ -1,16 +1,16 @@
 # Usage examples
 
-Copy-paste patterns for the public API in `py_bash.bash_utils`. Signatures and edge cases are fully documented in the
-source docstrings; this page focuses on **safe defaults** and common flows.
+Copy-paste patterns for the public API in `py_bash_wrapper.bash_utils`. Signatures and edge cases are fully documented
+in the source docstrings; this page focuses on **safe defaults** and common flows.
 
 ## Install from PyPI
 
 ```bash
-pip install py_bash
+pip install py_bash_wrapper
 ```
 
 ```python
-from py_bash.bash_utils import run_command
+from py_bash_wrapper.bash_utils import run_command
 
 print(run_command(["echo", "hello"], check=True).stdout)
 ```
@@ -23,7 +23,7 @@ Use a fixed argument list when you do not need pipes, redirects, globbing, or ot
 injection when arguments are dynamic but individually controlled (still validate inputs in your own code).
 
 ```python
-from py_bash.bash_utils import run_command
+from py_bash_wrapper.bash_utils import run_command
 
 result = run_command(["echo", "hello"], check=True)
 print(result.stdout)
@@ -35,7 +35,7 @@ print(result.stdout)
 pass untrusted or externally controlled strings as `command`.
 
 ```python
-from py_bash.bash_utils import run_bash
+from py_bash_wrapper.bash_utils import run_bash
 
 result = run_bash("echo hello | wc -c", check=True)
 print(result.stdout.strip())
@@ -49,7 +49,7 @@ to the process (e.g., `bash`, `-c`, script).
 With `check=True`, a non-zero exit code raises `CommandError` and attaches the `CommandResult` on `exc.result`.
 
 ```python
-from py_bash.bash_utils import CommandError, run_command
+from py_bash_wrapper.bash_utils import CommandError, run_command
 
 try:
     run_command(["false"], check=True)
@@ -63,7 +63,7 @@ Some tools exit 0 but print failure markers. Use `check_result_for_text` for sub
 `require_success` to assert a zero exit code on an existing `CommandResult`.
 
 ```python
-from py_bash.bash_utils import check_result_for_text, require_success, run_command
+from py_bash_wrapper.bash_utils import check_result_for_text, require_success, run_command
 
 result = run_command(["some-tool", "--json"], check=False)
 require_success(result)
@@ -83,10 +83,10 @@ This is best-effort and depends on OS permissions and sudo policy; it is not a s
 ## Imports and version
 
 ```python
-import py_bash
-from py_bash.bash_utils import CommandResult, run_bash, run_command
+import py_bash_wrapper
+from py_bash_wrapper.bash_utils import CommandResult, run_bash, run_command
 
-print(py_bash.__version__)
+print(py_bash_wrapper.__version__)
 ```
 
 For contributor setup (virtualenv, lint, tests), see [README.md](../README.md) and [code_style.md](code_style.md).

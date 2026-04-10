@@ -8,8 +8,8 @@ Operational context for merging, releasing, and reviewing changes. User-facing s
 - **`VERSION`** at the repo root holds the canonical SemVer string **without** a `v` prefix.
   - This must be manually bumped on each branch before merging to `main`.
 - **Git tags** use a **`v` prefix** (e.g., `v0.2.0`).
-- **`py_bash.__version__`** comes from installed package metadata when available; from a checkout it can fall back to
-  reading `VERSION`. See `py_bash/__init__.py`.
+- **`py_bash_wrapper.__version__`** comes from installed package metadata when available; from a checkout it can fall
+  back to reading `VERSION`. See `py_bash_wrapper/__init__.py`.
 
 ## Release path
 
@@ -20,14 +20,15 @@ Operational context for merging, releasing, and reviewing changes. User-facing s
 
 ## PyPI publishing
 
-Releases upload to [PyPI](https://pypi.org/project/py_bash/).
+Releases upload to [PyPI](https://pypi.org/project/py_bash_wrapper/).
 
 **Workflow and environment**
 
 - Triggered on all pushes to `main`.
 - GHA Workflow file: `.github/workflows/release-from-version.yml`.
 - Job: `publish-pypi` uses GitHub environment **`pypi`**. Create that environment under the repository
-  **Settings > Environments** if it does not exist yet. Optional: add required reviewers or wait timers for extra safety.
+  **Settings > Environments** if it does not exist yet. Optional: add required reviewers or wait timers for extra
+  safety.
 
 ## CI
 

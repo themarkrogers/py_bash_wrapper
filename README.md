@@ -7,25 +7,25 @@
 [![PyPI][#pypi-project-version]][#pypi-package]
 
 [#agpl-v3]: https://img.shields.io/badge/License-AGPLv3-blue.svg
-[#ci-badge-img]: https://github.com/themarkrogers/py_bash/actions/workflows/ci.yml/badge.svg
-[#ci-workflow]: https://github.com/themarkrogers/py_bash/actions/workflows/ci.yml
+[#ci-badge-img]: https://github.com/themarkrogers/py_bash_wrapper/actions/workflows/ci.yml/badge.svg
+[#ci-workflow]: https://github.com/themarkrogers/py_bash_wrapper/actions/workflows/ci.yml
 [#license-gh-package]: https://www.gnu.org/licenses/agpl-3.0.en.html#license-text
-[#pypi-package]: https://pypi.org/project/py_bash/
-[#pypi-project-python-version]: https://img.shields.io/pypi/pyversions/py_bash
-[#pypi-project-version]: https://img.shields.io/pypi/v/py_bash
+[#pypi-package]: https://pypi.org/project/py_bash_wrapper/
+[#pypi-project-python-version]: https://img.shields.io/pypi/pyversions/py_bash_wrapper
+[#pypi-project-version]: https://img.shields.io/pypi/v/py_bash_wrapper
 [#status-active]: http://opensource.box.com/badges/active.svg
 [#status-inactive]: http://opensource.box.com/badges/inactive.svg
 [#status-licenses]: http://opensource.box.com/badges
 
 <!--- BADGES: END --->
 
-# Py_Bash
+# Py Bash Wrapper
 
-![Logo](assets/py_bash-logo.png)
+![Logo](assets/py_bash_wrapper-logo.png)
 
 ## Description
 
-**Py_Bash** helps Python developers run bash/shell/subprocess commands with two convenience functions:
+**Py Bash Wrapper** helps Python developers run bash/shell/subprocess commands with two convenience functions:
 
 * The **`run_command`** function takes in an argv **list** and provides no advances shell features likes pipes.
 * The **`run_bash`** function provides real Bash (e.g., pipes, redirects, globs, etc.).
@@ -35,10 +35,10 @@ The argument **`check=True`** will cause failures to raise a **`CommandError`**.
 
 ## Installation
 
-From [PyPI](https://pypi.org/project/py_bash/):
+From [PyPI](https://pypi.org/project/py_bash_wrapper/):
 
 ```bash
-pip install py_bash
+pip install py_bash_wrapper
 ```
 
 ## Documentation
@@ -49,7 +49,7 @@ pip install py_bash
 - [Maintainers](docs/maintainers.md) -- versions, CI, releases, security notes for shell APIs.
 - [Plan / roadmap](docs/plan.md) -- upcoming tasks.
 
-Full API details live in docstrings under `py_bash/bash_utils.py` and in the usage doc above.
+Full API details live in docstrings under `py_bash_wrapper/bash_utils.py` and in the usage doc above.
 
 ## Security note
 
@@ -65,7 +65,7 @@ make install
 ```
 
 ```python
-from py_bash.bash_utils import run_command, run_bash
+from py_bash_wrapper.bash_utils import run_command, run_bash
 
 print(run_command(["python", "-c", "print(1+1)"], check=True).stdout.strip())
 print(run_bash("echo hello | wc -c", check=True).stdout.strip())

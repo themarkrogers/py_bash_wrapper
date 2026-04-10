@@ -1,5 +1,5 @@
 """
-py_bash/bash_utils.py
+py_bash_wrapper/bash_utils.py
 
 Reusable helpers for running commands and Bash snippets from Python.
 

@@ -56,7 +56,7 @@ def test_built_wheel_installs_and_imports_with_expected_version(tmp_path: Path) 
         text=True,
     )
     import_result = subprocess.run(
-        [str(venv_python), "-c", "import py_bash; print(py_bash.__version__)"],
+        [str(venv_python), "-c", "import py_bash_wrapper; print(py_bash_wrapper.__version__)"],
         check=True,
         capture_output=True,
         text=True,

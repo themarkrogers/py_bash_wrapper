@@ -7,7 +7,7 @@
 # Python
 dist/
 venv/
-py_bash.egg-info
+py_bash_wrapper.egg-info
 *.py[cod]
 
 # JetBrains

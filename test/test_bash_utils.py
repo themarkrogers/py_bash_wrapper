@@ -1,4 +1,4 @@
-"""Unit tests for `py_bash.bash_utils` (mocked subprocess, timeouts, user/sudo branches, and helpers)."""
+"""Unit tests for `py_bash_wrapper.bash_utils` (mocked subprocess, timeouts, user/sudo branches, and helpers)."""
 
 import os as real_os
 import signal
@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-import py_bash.bash_utils as under_test
+import py_bash_wrapper.bash_utils as under_test
 
 
 def _completed(return_code: int = 0, stdout: str = "", stderr: str = "") -> subprocess.CompletedProcess[str]:
@@ -122,9 +122,9 @@ class TestCommandError(TestCase):
 class TestMakePreExecFunctionToRunAsUser(TestCase):
     """Tests for `_make_pre_exec_function_to_run_as_user`."""
 
-    @patch("py_bash.bash_utils.pwd.getpwnam", autospec=True)
-    @patch("py_bash.bash_utils.os.setuid", autospec=True)
-    @patch("py_bash.bash_utils.os.setgid", autospec=True)
+    @patch("py_bash_wrapper.bash_utils.pwd.getpwnam", autospec=True)
+    @patch("py_bash_wrapper.bash_utils.os.setuid", autospec=True)
+    @patch("py_bash_wrapper.bash_utils.os.setgid", autospec=True)
     def test_given_user_when_calling_returned_preexec_then_sets_ids_and_home(
         self, mock_setgid: MagicMock, mock_setuid: MagicMock, mock_getpwnam: MagicMock
     ) -> None:
@@ -134,7 +134,7 @@ class TestMakePreExecFunctionToRunAsUser(TestCase):
         fake_passwd_entry.pw_gid = 4321
         fake_passwd_entry.pw_dir = "/home/example"
         mock_getpwnam.return_value = fake_passwd_entry
-        with patch.dict("py_bash.bash_utils.os.environ", {"HOME": "/old/home"}, clear=True):
+        with patch.dict("py_bash_wrapper.bash_utils.os.environ", {"HOME": "/old/home"}, clear=True):
             # When
             pre_exec_function = under_test._make_pre_exec_function_to_run_as_user("example")
             pre_exec_function()
@@ -169,7 +169,7 @@ class TestRunCommand(TestCase):
         with pytest.raises(ValueError, match="command must be either"):
             under_test.run_command(cast("list[str]", bad))
 
-    @patch("py_bash.bash_utils.subprocess.run", autospec=True)
+    @patch("py_bash_wrapper.bash_utils.subprocess.run", autospec=True)
     def test_given_successful_process_then_result_ok_and_output_set(self, mock_subprocess_run: MagicMock) -> None:
         # Given
         mock_subprocess_run.return_value = _completed(return_code=0, stdout="hi\n", stderr="")
@@ -184,7 +184,7 @@ class TestRunCommand(TestCase):
         mock_subprocess_run.assert_called_once()
         assert mock_subprocess_run.call_args[0][0] == argv
 
-    @patch("py_bash.bash_utils.subprocess.run", autospec=True)
+    @patch("py_bash_wrapper.bash_utils.subprocess.run", autospec=True)
     def test_given_string_command_then_splits_with_shlex_like_argv_list(self, mock_subprocess_run: MagicMock) -> None:
         # Given
         mock_subprocess_run.return_value = _completed(return_code=0, stdout="hi\n", stderr="")
@@ -199,7 +199,7 @@ class TestRunCommand(TestCase):
         assert mock_subprocess_run.call_args[0][0] == expected_argv
         assert result.args == expected_argv
 
-    @patch("py_bash.bash_utils.subprocess.run", autospec=True)
+    @patch("py_bash_wrapper.bash_utils.subprocess.run", autospec=True)
     def test_given_nonzero_exit_and_check_false_then_no_raise(self, mock_subprocess_run: MagicMock) -> None:
         # Given
         mock_subprocess_run.return_value = _completed(return_code=7, stdout="", stderr="nope")
@@ -212,7 +212,7 @@ class TestRunCommand(TestCase):
         mock_subprocess_run.assert_called_once()
         assert mock_subprocess_run.call_args[0][0] == argv
 
-    @patch("py_bash.bash_utils.subprocess.run", autospec=True)
+    @patch("py_bash_wrapper.bash_utils.subprocess.run", autospec=True)
     def test_given_nonzero_exit_and_check_true_then_raises_command_error(self, mock_subprocess_run: MagicMock) -> None:
         # Given
         return_code = 2
@@ -227,7 +227,7 @@ class TestRunCommand(TestCase):
         mock_subprocess_run.assert_called_once()
         assert mock_subprocess_run.call_args[0][0] == argv
 
-    @patch("py_bash.bash_utils.subprocess.run", autospec=True)
+    @patch("py_bash_wrapper.bash_utils.subprocess.run", autospec=True)
     def test_given_timeout_expired_then_raises_timeout_error(self, mock_subprocess_run: MagicMock) -> None:
         # Given
         mock_subprocess_run.side_effect = subprocess.TimeoutExpired(cmd=["slow"], timeout=3.0)
@@ -238,7 +238,7 @@ class TestRunCommand(TestCase):
         mock_subprocess_run.assert_called_once()
         assert mock_subprocess_run.call_args[0][0] == argv
 
-    @patch("py_bash.bash_utils.subprocess.run", autospec=True)
+    @patch("py_bash_wrapper.bash_utils.subprocess.run", autospec=True)
     def test_given_env_and_path_then_subprocess_gets_merged_env(self, mock_subprocess_run: MagicMock) -> None:
         # Given
         mock_subprocess_run.return_value = _completed(0, "", "")
@@ -254,7 +254,7 @@ class TestRunCommand(TestCase):
         mock_subprocess_run.assert_called_once()
         assert mock_subprocess_run.call_args[0][0] == argv
 
-    @patch("py_bash.bash_utils.subprocess.run", autospec=True)
+    @patch("py_bash_wrapper.bash_utils.subprocess.run", autospec=True)
     def test_given_path_string_then_path_env_is_string(self, mock_subprocess_run: MagicMock) -> None:
         # Given
         mock_subprocess_run.return_value = _completed(0, "", "")
@@ -266,11 +266,11 @@ class TestRunCommand(TestCase):
         mock_subprocess_run.assert_called_once()
         assert mock_subprocess_run.call_args[0][0] == argv
 
-    @patch("py_bash.bash_utils.subprocess.run", autospec=True)
+    @patch("py_bash_wrapper.bash_utils.subprocess.run", autospec=True)
     def test_given_cwd_path_then_cwd_passed_as_str(self, mock_subprocess_run: MagicMock) -> None:
         # Given
         mock_subprocess_run.return_value = _completed(0, "", "")
-        tmp = Path("/tmp/py_bash_test_cwd")
+        tmp = Path("/tmp/py_bash_wrapper_test_cwd")
         argv = ["ls"]
         # When
         under_test.run_command(argv, cwd=tmp)
@@ -279,7 +279,7 @@ class TestRunCommand(TestCase):
         mock_subprocess_run.assert_called_once()
         assert mock_subprocess_run.call_args[0][0] == argv
 
-    @patch("py_bash.bash_utils.subprocess.run", autospec=True)
+    @patch("py_bash_wrapper.bash_utils.subprocess.run", autospec=True)
     def test_given_input_text_then_passed_to_subprocess(self, mock_subprocess_run: MagicMock) -> None:
         # Given
         mock_subprocess_run.return_value = _completed(0, "out", "")
@@ -291,7 +291,7 @@ class TestRunCommand(TestCase):
         mock_subprocess_run.assert_called_once()
         assert mock_subprocess_run.call_args[0][0] == argv
 
-    @patch("py_bash.bash_utils.subprocess.run", autospec=True)
+    @patch("py_bash_wrapper.bash_utils.subprocess.run", autospec=True)
     def test_given_inherit_env_false_then_env_starts_minimal(self, mock_subprocess_run: MagicMock) -> None:
         # Given
         mock_subprocess_run.return_value = _completed(0, "", "")
@@ -304,7 +304,7 @@ class TestRunCommand(TestCase):
         mock_subprocess_run.assert_called_once()
         assert mock_subprocess_run.call_args[0][0] == argv
 
-    @patch("py_bash.bash_utils.subprocess.run", autospec=True)
+    @patch("py_bash_wrapper.bash_utils.subprocess.run", autospec=True)
     def test_given_empty_path_entries_then_path_env_is_empty_string(self, mock_subprocess_run: MagicMock) -> None:
         # Given
         mock_subprocess_run.return_value = _completed(0, "", "")
@@ -318,7 +318,7 @@ class TestRunCommand(TestCase):
         mock_subprocess_run.assert_called_once()
         assert mock_subprocess_run.call_args[0][0] == argv
 
-    @patch("py_bash.bash_utils.subprocess.run", autospec=True)
+    @patch("py_bash_wrapper.bash_utils.subprocess.run", autospec=True)
     def test_given_large_output_then_stdout_and_stderr_are_not_truncated(self, mock_subprocess_run: MagicMock) -> None:
         # Given
         large_stdout = "A" * 10_000
@@ -334,7 +334,7 @@ class TestRunCommand(TestCase):
         mock_subprocess_run.assert_called_once()
         assert mock_subprocess_run.call_args[0][0] == argv
 
-    @patch("py_bash.bash_utils.subprocess.run", autospec=True)
+    @patch("py_bash_wrapper.bash_utils.subprocess.run", autospec=True)
     def test_given_text_false_and_none_streams_then_result_streams_become_empty_strings(
         self, mock_subprocess_run: MagicMock
     ) -> None:
@@ -351,8 +351,8 @@ class TestRunCommand(TestCase):
         mock_subprocess_run.assert_called_once()
         assert mock_subprocess_run.call_args[0][0] == argv
 
-    @patch("py_bash.bash_utils.subprocess.run", autospec=True)
-    @patch("py_bash.bash_utils.os")
+    @patch("py_bash_wrapper.bash_utils.subprocess.run", autospec=True)
+    @patch("py_bash_wrapper.bash_utils.os")
     def test_given_user_on_non_posix_then_raises_runtime_error(
         self, mock_os: MagicMock, mock_subprocess_run: MagicMock
     ) -> None:
@@ -364,9 +364,9 @@ class TestRunCommand(TestCase):
             under_test.run_command(["cmd"], user="someone")
         mock_subprocess_run.assert_not_called()
 
-    @patch("py_bash.bash_utils.subprocess.run", autospec=True)
-    @patch("py_bash.bash_utils._make_pre_exec_function_to_run_as_user", return_value=lambda: None)
-    @patch("py_bash.bash_utils.os")
+    @patch("py_bash_wrapper.bash_utils.subprocess.run", autospec=True)
+    @patch("py_bash_wrapper.bash_utils._make_pre_exec_function_to_run_as_user", return_value=lambda: None)
+    @patch("py_bash_wrapper.bash_utils.os")
     def test_given_user_as_root_then_pre_exec_fn_set(
         self, mock_os: MagicMock, make_pre_exec_fn: MagicMock, mock_subprocess_run: MagicMock
     ) -> None:
@@ -384,9 +384,9 @@ class TestRunCommand(TestCase):
         mock_subprocess_run.assert_called_once()
         assert mock_subprocess_run.call_args[0][0] == argv
 
-    @patch("py_bash.bash_utils.subprocess.run", autospec=True)
-    @patch("py_bash.bash_utils.shutil.which", return_value="/usr/bin/sudo")
-    @patch("py_bash.bash_utils.os")
+    @patch("py_bash_wrapper.bash_utils.subprocess.run", autospec=True)
+    @patch("py_bash_wrapper.bash_utils.shutil.which", return_value="/usr/bin/sudo")
+    @patch("py_bash_wrapper.bash_utils.os")
     def test_given_user_non_root_with_sudo_then_argv_prefixed(
         self, mock_os: MagicMock, mock_which: MagicMock, mock_subprocess_run: MagicMock
     ) -> None:
@@ -406,9 +406,9 @@ class TestRunCommand(TestCase):
         mock_which.assert_called_once()
         mock_subprocess_run.assert_called_once()
 
-    @patch("py_bash.bash_utils.shutil.which", return_value=None)
-    @patch("py_bash.bash_utils.subprocess.run", autospec=True)
-    @patch("py_bash.bash_utils.os")
+    @patch("py_bash_wrapper.bash_utils.shutil.which", return_value=None)
+    @patch("py_bash_wrapper.bash_utils.subprocess.run", autospec=True)
+    @patch("py_bash_wrapper.bash_utils.os")
     def test_given_user_non_root_without_sudo_then_raises(
         self, mock_os: MagicMock, mock_subprocess_run: MagicMock, mock_which: MagicMock
     ) -> None:
@@ -444,7 +444,7 @@ class TestRunBash(TestCase):
         with pytest.raises(ValueError, match="must not be empty"):
             under_test.run_bash(command)
 
-    @patch("py_bash.bash_utils.subprocess.run", autospec=True)
+    @patch("py_bash_wrapper.bash_utils.subprocess.run", autospec=True)
     def test_given_strict_true_then_script_includes_pipefail(self, mock_subprocess_run: MagicMock) -> None:
         # Given
         mock_subprocess_run.return_value = _completed(0, "", "")
@@ -460,7 +460,7 @@ class TestRunBash(TestCase):
         assert mock_subprocess_run.call_args[0][0][0] == self.bin_bash
         assert mock_subprocess_run.call_args[0][0][-1].split("\n")[-1] == user_command
 
-    @patch("py_bash.bash_utils.subprocess.run", autospec=True)
+    @patch("py_bash_wrapper.bash_utils.subprocess.run", autospec=True)
     def test_given_strict_false_then_script_has_no_pipefail_prefix(self, mock_subprocess_run: MagicMock) -> None:
         # Given
         mock_subprocess_run.return_value = _completed(0, "", "")
@@ -475,7 +475,7 @@ class TestRunBash(TestCase):
         assert mock_subprocess_run.call_args[0][0][0] == self.bin_bash
         assert mock_subprocess_run.call_args[0][0][-1].split("\n")[-1] == body
 
-    @patch("py_bash.bash_utils.subprocess.run", autospec=True)
+    @patch("py_bash_wrapper.bash_utils.subprocess.run", autospec=True)
     def test_given_login_true_then_bash_argv_includes_l_flag(self, mock_subprocess_run: MagicMock) -> None:
         # Given
         mock_subprocess_run.return_value = _completed(0, "", "")
@@ -490,7 +490,7 @@ class TestRunBash(TestCase):
         assert mock_subprocess_run.call_args[0][0][0] == self.bin_bash
         assert mock_subprocess_run.call_args[0][0][-1].split("\n")[-1] == argv
 
-    @patch("py_bash.bash_utils.subprocess.run", autospec=True)
+    @patch("py_bash_wrapper.bash_utils.subprocess.run", autospec=True)
     def test_given_custom_shell_path_then_used_as_argv_zero(self, mock_subprocess_run: MagicMock) -> None:
         # Given
         mock_subprocess_run.return_value = _completed(0, "", "")
@@ -501,7 +501,7 @@ class TestRunBash(TestCase):
         assert mock_subprocess_run.call_args[0][0][0] == custom
         mock_subprocess_run.assert_called_once()
 
-    @patch("py_bash.bash_utils.subprocess.run", autospec=True)
+    @patch("py_bash_wrapper.bash_utils.subprocess.run", autospec=True)
     def test_given_success_then_command_display_is_user_string(self, mock_subprocess_run: MagicMock) -> None:
         # Given
         mock_subprocess_run.return_value = _completed(0, "x", "")
@@ -515,7 +515,7 @@ class TestRunBash(TestCase):
         assert mock_subprocess_run.call_args[0][0][0] == self.bin_bash
         assert mock_subprocess_run.call_args[0][0][-1].split("\n")[-1] == bash_line
 
-    @patch("py_bash.bash_utils.subprocess.run", autospec=True)
+    @patch("py_bash_wrapper.bash_utils.subprocess.run", autospec=True)
     def test_given_failure_and_check_true_then_raises_command_error(self, mock_subprocess_run: MagicMock) -> None:
         # Given
         mock_subprocess_run.return_value = _completed(1, "", "err")
@@ -697,7 +697,7 @@ class TestRequireSuccess(TestCase):
 class TestTerminateProcessGroup(TestCase):
     """Tests for `terminate_process_group`."""
 
-    @patch("py_bash.bash_utils.os.killpg")
+    @patch("py_bash_wrapper.bash_utils.os.killpg")
     def test_given_process_with_pid_then_killpg_with_sigterm(self, mock_killpg: MagicMock) -> None:
         # Given
         proc = MagicMock()
@@ -707,7 +707,7 @@ class TestTerminateProcessGroup(TestCase):
         # Then
         mock_killpg.assert_called_once_with(4242, signal.SIGTERM)
 
-    @patch("py_bash.bash_utils.os.killpg", side_effect=ProcessLookupError)
+    @patch("py_bash_wrapper.bash_utils.os.killpg", side_effect=ProcessLookupError)
     def test_given_process_lookup_error_then_no_propagate(self, mock_killpg: MagicMock) -> None:
         # Given
         proc = MagicMock()

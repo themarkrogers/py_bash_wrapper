@@ -630,7 +630,7 @@ wheels = [
 ]
 
 [[package]]
-name = "py-bash"
+name = "py-bash-wrapper"
 source = { editable = "." }
 
 [package.optional-dependencies]

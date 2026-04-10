@@ -9,9 +9,9 @@ from importlib.metadata import PackageNotFoundError, version
 def _version() -> str:
     # After `pip install` / `uv sync`, the version comes from package metadata (same value as the VERSION file at
     # build time). If the package is not installed (e.g., running tests from a bare clone), then the metadata will be
-    # missing, so read the repo-root VERSION file next to the `py_bash` package directory instead.
+    # missing, so read the repo-root VERSION file next to the `py_bash_wrapper` package directory instead.
     try:
-        return version("py_bash")
+        return version("py_bash_wrapper")
     except PackageNotFoundError:
         from pathlib import Path
 
