@@ -67,7 +67,7 @@ Prerequisites:
   * Linux: install `build-essential`.
   * Windows: use Git Bash, WSL, or another environment that provides `make`, or run the same `uv run ...` commands from
     the [Makefile](https://github.com/themarkrogers/py_bash_wrapper/blob/main/Makefile) by hand.
-* **Python 3.12+**: install via OS package manager, via `uv` with `uv python install 3.12`, or via
+* **Python 3.11+**: install via OS package manager, via `uv` with `uv python install 3.11`, or via
   [python.org](https://www.python.org/downloads/).
 
 ## Versioning

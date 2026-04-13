@@ -6,7 +6,7 @@ This project uses a small, enforced toolchain. For day-to-day commands, see [REA
 
 - **Ruff** -- lint and format. Configuration lives in `pyproject.toml` under `[tool.ruff]` and `[tool.ruff.lint]`.
 - **Line length:** 120 characters.
-- **Python syntax baseline:** `target-version = "py312"` (code may run on 3.12+).
+- **Python syntax baseline:** `target-version = "py311"` (code may run on 3.11+).
 - **Mypy** -- static typing. `[tool.mypy]` excludes `build/` and `dist/`.
 
 ## Types and public API
