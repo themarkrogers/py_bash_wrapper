@@ -9,8 +9,10 @@ Design goals:
 - Structured result object with stdout, stderr, exit code, and success flag.
 - Optional custom environment / PATH.
 - Optional run-as-user support on Unix:
-  - Preferred: drop privileges directly via preexec_fn when running as root.
-  - Fallback: use sudo if available and allowed.
+  - If the effective UID already matches the target user, run the command directly (no sudo, no preexec_fn) so PATH and
+    env are preserved.
+  - If running as root for a different user, drop privileges via preexec_fn.
+  - Otherwise, use sudo if available and allowed (sudo may apply secure_path and override PATH).
 - Good errors and type hints.
 """
 
@@ -81,6 +83,14 @@ def _merge_env(
 def _quote_join(argv: Sequence[str]) -> str:
     """Human-readable shell-quoted rendering of argv for logs/errors."""
     return subprocess.list2cmdline(list(argv))
+
+
+def _passwd_uid_for_username(username: str) -> int:
+    """Return the passwd database UID for a Unix login name."""
+    try:
+        return pwd.getpwnam(username).pw_uid
+    except KeyError as exc:
+        raise ValueError(f"No passwd entry for Unix user {username!r}") from exc
 
 
 def _make_pre_exec_function_to_run_as_user(user: str) -> Callable[[], None]:
@@ -193,7 +203,7 @@ def run_bash(
         input_text: Optional stdin text.
         check: Raise CommandError if exit code != 0.
         inherit_env: Whether to start from current os.environ.
-        user: Target Unix username to run as.
+        user: Target Unix username; semantics match `run_command(..., user=...)`.
         login: Use a login shell (`bash -l -c`) so profile files may be sourced.
         strict: Prepend `set -euo pipefail`.
         path_to_shell_executable: Path to bash.
@@ -259,7 +269,10 @@ def run_command(
         check: Raise CommandError if exit code != 0.
         text: Capture text output. Defaults to True.
         inherit_env: Whether to start from the current os.environ.
-        user: Target Unix username to run as. Best-effort; see notes below.
+        user: Target Unix username to run as, best-effort. If the effective UID already matches that user, the command
+            runs without sudo or privilege-drop so your merged environment (including PATH) is passed through unchanged.
+            If sudo is used for a different user, many sudoers configurations set secure_path, which can replace PATH
+            regardless of the env dict passed here. Unknown usernames raise ValueError.
 
     Returns:
         CommandResult
@@ -281,12 +294,14 @@ def run_command(
     if user:
         if os.name != "posix":
             raise RuntimeError("user switching is only supported on Unix-like systems")
-        # Check if user is root
-        if os.geteuid() == 0:
-            # If root, then drop privileges in the child.
+        target_uid = _passwd_uid_for_username(user)
+        euid = os.geteuid()
+        if euid == target_uid:
+            # Already the target user: avoid sudo (secure_path) and avoid redundant preexec_fn.
+            pre_exec_function_to_run_as_user = None
+        elif euid == 0:
             pre_exec_function_to_run_as_user = _make_pre_exec_function_to_run_as_user(user)
         else:
-            # If non-root, then prepend sudo when available (policy-dependent).
             sudo_path = shutil.which("sudo", path=merged_env.get("PATH"))
             if sudo_path is None:
                 raise RuntimeError("Cannot run as another user: not root and sudo not found in PATH")

@@ -84,9 +84,16 @@ check_result_for_text(result, error_substrings=["FATAL", "ERROR:"])
 
 `run_command` and `run_bash` accept `user="someunixuser"` on **POSIX** only:
 
-- If the current effective UID is **0** (root), the child drops privileges via `preexec_fn`.
-- Otherwise, the code prepends **`sudo -H -u user --`** when `sudo` is on `PATH`; if not root and no `sudo`, it raises
-  `RuntimeError`.
+- If the current effective UID **matches** that user (per the passwd database), the command runs **directly** -- no
+  `sudo`, no `preexec_fn` -- so the merged environment you pass in (including `PATH`) is what the child sees.
+- If the effective UID is **0** (root) and the target user is **different**, the child drops privileges via
+  `preexec_fn`.
+- Otherwise (non-root, different user), the code prepends **`sudo -H -u user --`** when `sudo` is on `PATH`; if `sudo`
+  is missing, it raises `RuntimeError`. Unknown usernames raise `ValueError`.
+
+When `sudo` is involved, many systems configure **`secure_path`**, so the child may still see a reduced `PATH` even if
+your Python-side env included extra directories. Mitigations include using full paths to binaries, adjusting sudoers
+for your environment, or relying on the same-user shortcut above when the process already runs as that account.
 
 This is best-effort and depends on OS permissions and sudo policy; it is not a security boundary by itself.
 

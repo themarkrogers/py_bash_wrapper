@@ -439,6 +439,7 @@ class TestRunCommand(TestCase):
     ) -> None:
         # Given: same effective UID as passwd entry -- must not wrap in sudo so merged PATH/env reach the child.
         mock_os.name = "posix"
+        mock_os.pathsep = real_os.pathsep
         mock_os.geteuid.return_value = 1000
         mock_os.environ = dict(real_os.environ)
         mock_getpwnam.return_value = SimpleNamespace(pw_uid=1000, pw_gid=1000, pw_dir="/home/selfuser")
