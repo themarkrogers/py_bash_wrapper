@@ -4,6 +4,7 @@ import os as real_os
 import signal
 import subprocess
 from pathlib import Path
+from types import SimpleNamespace
 from typing import cast
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
@@ -366,14 +367,16 @@ class TestRunCommand(TestCase):
 
     @patch("py_bash_wrapper.bash_utils.subprocess.run", autospec=True)
     @patch("py_bash_wrapper.bash_utils._make_pre_exec_function_to_run_as_user", return_value=lambda: None)
+    @patch("py_bash_wrapper.bash_utils.pwd.getpwnam")
     @patch("py_bash_wrapper.bash_utils.os")
     def test_given_user_as_root_then_pre_exec_fn_set(
-        self, mock_os: MagicMock, make_pre_exec_fn: MagicMock, mock_subprocess_run: MagicMock
+        self, mock_os: MagicMock, mock_getpwnam: MagicMock, make_pre_exec_fn: MagicMock, mock_subprocess_run: MagicMock
     ) -> None:
         # Given
         mock_os.name = "posix"
         mock_os.geteuid.return_value = 0
         mock_os.environ = dict(real_os.environ)
+        mock_getpwnam.return_value = SimpleNamespace(pw_uid=65534, pw_gid=65534, pw_dir="/nonexistent")
         mock_subprocess_run.return_value = _completed(0, "ok", "")
         argv = ["id"]
         # When
@@ -386,14 +389,16 @@ class TestRunCommand(TestCase):
 
     @patch("py_bash_wrapper.bash_utils.subprocess.run", autospec=True)
     @patch("py_bash_wrapper.bash_utils.shutil.which", return_value="/usr/bin/sudo")
+    @patch("py_bash_wrapper.bash_utils.pwd.getpwnam")
     @patch("py_bash_wrapper.bash_utils.os")
     def test_given_user_non_root_with_sudo_then_argv_prefixed(
-        self, mock_os: MagicMock, mock_which: MagicMock, mock_subprocess_run: MagicMock
+        self, mock_os: MagicMock, mock_getpwnam: MagicMock, mock_which: MagicMock, mock_subprocess_run: MagicMock
     ) -> None:
-        # Given
+        # Given: effective UID must differ from the passwd entry so we exercise the sudo branch (not same-user).
         mock_os.name = "posix"
         mock_os.geteuid.return_value = 1000
         mock_os.environ = dict(real_os.environ)
+        mock_getpwnam.return_value = SimpleNamespace(pw_uid=1001, pw_gid=1001, pw_dir="/home/alice")
         mock_subprocess_run.return_value = _completed(0, "", "")
         argv = ["true"]
         expected_sudo = "/usr/bin/sudo"
@@ -408,20 +413,82 @@ class TestRunCommand(TestCase):
 
     @patch("py_bash_wrapper.bash_utils.shutil.which", return_value=None)
     @patch("py_bash_wrapper.bash_utils.subprocess.run", autospec=True)
+    @patch("py_bash_wrapper.bash_utils.pwd.getpwnam")
     @patch("py_bash_wrapper.bash_utils.os")
     def test_given_user_non_root_without_sudo_then_raises(
-        self, mock_os: MagicMock, mock_subprocess_run: MagicMock, mock_which: MagicMock
+        self, mock_os: MagicMock, mock_getpwnam: MagicMock, mock_subprocess_run: MagicMock, mock_which: MagicMock
     ) -> None:
-        # Given
+        # Given: target user differs from EUID so the implementation still attempts the sudo path.
         mock_os.name = "posix"
         mock_os.geteuid.return_value = 500
         mock_os.environ = dict(real_os.environ)
+        mock_getpwnam.return_value = SimpleNamespace(pw_uid=501, pw_gid=501, pw_dir="/home/bob")
         argv = ["true"]
         # When & Then
         with pytest.raises(RuntimeError, match="sudo not found"):
             under_test.run_command(argv, user="bob")
         mock_which.assert_called_once()
         mock_subprocess_run.assert_not_called()
+
+    @patch("py_bash_wrapper.bash_utils.subprocess.run", autospec=True)
+    @patch("py_bash_wrapper.bash_utils.shutil.which")
+    @patch("py_bash_wrapper.bash_utils.pwd.getpwnam")
+    @patch("py_bash_wrapper.bash_utils.os")
+    def test_given_user_matches_euid_then_runs_without_sudo(
+        self, mock_os: MagicMock, mock_getpwnam: MagicMock, mock_which: MagicMock, mock_subprocess_run: MagicMock
+    ) -> None:
+        # Given: same effective UID as passwd entry -- must not wrap in sudo so merged PATH/env reach the child.
+        mock_os.name = "posix"
+        mock_os.geteuid.return_value = 1000
+        mock_os.environ = dict(real_os.environ)
+        mock_getpwnam.return_value = SimpleNamespace(pw_uid=1000, pw_gid=1000, pw_dir="/home/selfuser")
+        mock_subprocess_run.return_value = _completed(0, "", "")
+        argv = ["which", "hisat2"]
+        extra_path = "/opt/hisat2-2.2.1"
+        # When
+        under_test.run_command(argv, user="selfuser", path=["/bin", "/usr/bin", extra_path])
+        # Then
+        mock_which.assert_not_called()
+        assert mock_subprocess_run.call_args[0][0] == argv
+        assert mock_subprocess_run.call_args.kwargs.get("preexec_fn") in (None, False)
+        child_env = mock_subprocess_run.call_args.kwargs["env"]
+        assert extra_path in child_env.get("PATH", "")
+
+    @patch("py_bash_wrapper.bash_utils.subprocess.run", autospec=True)
+    @patch("py_bash_wrapper.bash_utils.shutil.which", return_value="/usr/bin/sudo")
+    @patch("py_bash_wrapper.bash_utils.os")
+    @patch("py_bash_wrapper.bash_utils.pwd.getpwnam")
+    def test_given_unknown_username_then_raises_value_error(
+        self, mock_getpwnam: MagicMock, mock_os: MagicMock, mock_which: MagicMock, mock_subprocess_run: MagicMock
+    ) -> None:
+        # Given
+        mock_os.name = "posix"
+        mock_os.geteuid.return_value = 1000
+        mock_os.environ = dict(real_os.environ)
+        mock_getpwnam.side_effect = KeyError("getpwnam(): name not found: 'nonesuch_pbw_user'")
+        # When & Then: library should surface a clear error before subprocess or sudo.
+        with pytest.raises(ValueError, match="nonesuch_pbw_user"):
+            under_test.run_command(["true"], user="nonesuch_pbw_user")
+        mock_subprocess_run.assert_not_called()
+
+    @patch("py_bash_wrapper.bash_utils.subprocess.run", autospec=True)
+    @patch("py_bash_wrapper.bash_utils.pwd.getpwnam")
+    @patch("py_bash_wrapper.bash_utils.os")
+    def test_given_user_root_when_euid_root_then_runs_without_preexec(
+        self, mock_os: MagicMock, mock_getpwnam: MagicMock, mock_subprocess_run: MagicMock
+    ) -> None:
+        # Given: root invoking as root should not use preexec_fn so the merged environment is preserved unchanged.
+        mock_os.name = "posix"
+        mock_os.geteuid.return_value = 0
+        mock_os.environ = dict(real_os.environ)
+        mock_getpwnam.return_value = SimpleNamespace(pw_uid=0, pw_gid=0, pw_dir="/root")
+        mock_subprocess_run.return_value = _completed(0, "root", "")
+        argv = ["whoami"]
+        # When
+        under_test.run_command(argv, user="root")
+        # Then
+        assert mock_subprocess_run.call_args.kwargs.get("preexec_fn") in (None, False)
+        assert mock_subprocess_run.call_args[0][0] == argv
 
 
 class TestRunBash(TestCase):
