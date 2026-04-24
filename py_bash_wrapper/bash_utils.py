@@ -22,9 +22,11 @@ import shlex
 import shutil
 import signal
 import subprocess
+import threading
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import IO, Any
 
 
 @dataclass(slots=True)
@@ -183,6 +185,9 @@ def run_bash(
     strict: bool = True,
     path_to_shell_executable: str = "/bin/bash",
     shell: bool = False,
+    stdout: int | IO[str] | None = None,
+    stderr: int | IO[str] | None = None,
+    stream_callback: Callable[[str, str], None] | None = None,
 ) -> CommandResult:
     """
     Run a real Bash command string.
@@ -228,6 +233,9 @@ def run_bash(
         inherit_env=inherit_env,
         user=user,
         shell=shell,
+        stdout=stdout,
+        stderr=stderr,
+        stream_callback=stream_callback,
     )
     # Show the caller's Bash source in errors/logs; args still reflect the real argv (bash -c script).
     result = CommandResult(
@@ -255,6 +263,9 @@ def run_command(
     inherit_env: bool = True,
     user: str | None = None,
     shell: bool = False,
+    stdout: int | IO[str] | None = None,
+    stderr: int | IO[str] | None = None,
+    stream_callback: Callable[[str, str], None] | None = None,
 ) -> CommandResult:
     """
     Run a normal command safely without a shell.
@@ -310,29 +321,100 @@ def run_command(
                 raise RuntimeError("Cannot run as another user: not root and sudo not found in PATH")
             final_argv = [sudo_path, "-H", "-u", user, "--", *final_argv]
 
-    try:
-        proc = subprocess.run(
-            final_argv,
-            input=input_text,
-            capture_output=True,
-            text=text,
-            cwd=str(cwd) if cwd is not None else None,
-            env=merged_env,
-            timeout=timeout,
-            check=False,
-            preexec_fn=pre_exec_function_to_run_as_user,
-            shell=shell,
-        )
-    except subprocess.TimeoutExpired as exc:
-        raise TimeoutError(f"Command timed out after {timeout}s: {_quote_join(final_argv)}") from exc
+    if stream_callback is None:
+        run_kwargs: dict[str, Any] = {
+            "input": input_text,
+            "text": text,
+            "cwd": str(cwd) if cwd is not None else None,
+            "env": merged_env,
+            "timeout": timeout,
+            "check": False,
+            "preexec_fn": pre_exec_function_to_run_as_user,
+            "shell": shell,
+        }
+        if stdout is None and stderr is None:
+            run_kwargs["capture_output"] = True
+        else:
+            run_kwargs["stdout"] = stdout
+            run_kwargs["stderr"] = stderr
 
-    result = CommandResult(
-        args=final_argv,
-        command_display=_quote_join(final_argv),
-        exit_code=proc.returncode,
-        stdout=proc.stdout or "",
-        stderr=proc.stderr or "",
-    )
+        try:
+            proc = subprocess.run(final_argv, **run_kwargs)
+        except subprocess.TimeoutExpired as exc:
+            raise TimeoutError(f"Command timed out after {timeout}s: {_quote_join(final_argv)}") from exc
+
+        result = CommandResult(
+            args=final_argv,
+            command_display=_quote_join(final_argv),
+            exit_code=proc.returncode,
+            stdout=proc.stdout or "",
+            stderr=proc.stderr or "",
+        )
+    else:
+        stdin_target: int | None = subprocess.PIPE if input_text is not None else None
+        popen_stdout: int | IO[str] = subprocess.PIPE if stdout is None else stdout
+        popen_stderr: int | IO[str] = subprocess.PIPE if stderr is None else stderr
+        stdout_chunks: list[str] = []
+        stderr_chunks: list[str] = []
+
+        def _read_stream(pipe: Any, stream_name: str, sink: list[str]) -> None:
+            if pipe is None:
+                return
+            while True:
+                chunk = pipe.readline()
+                if chunk in ("", b""):
+                    break
+                text_chunk = chunk if isinstance(chunk, str) else chunk.decode("utf-8", errors="replace")
+                sink.append(text_chunk)
+                stream_callback(stream_name, text_chunk)
+
+        try:
+            popen_proc = subprocess.Popen(
+                final_argv,
+                stdin=stdin_target,
+                stdout=popen_stdout,
+                stderr=popen_stderr,
+                text=text,
+                cwd=str(cwd) if cwd is not None else None,
+                env=merged_env,
+                preexec_fn=pre_exec_function_to_run_as_user,
+                shell=shell,
+                start_new_session=True,
+            )
+        except OSError as exc:
+            raise RuntimeError(f"Failed to start command: {_quote_join(final_argv)}") from exc
+
+        if input_text is not None and popen_proc.stdin is not None:
+            popen_proc.stdin.write(input_text)
+            popen_proc.stdin.close()
+
+        threads: list[threading.Thread] = []
+        if popen_proc.stdout is not None:
+            threads.append(threading.Thread(target=_read_stream, args=(popen_proc.stdout, "stdout", stdout_chunks)))
+        if popen_proc.stderr is not None:
+            threads.append(threading.Thread(target=_read_stream, args=(popen_proc.stderr, "stderr", stderr_chunks)))
+
+        for worker in threads:
+            worker.daemon = True
+            worker.start()
+
+        try:
+            exit_code = popen_proc.wait(timeout=timeout)
+        except subprocess.TimeoutExpired as exc:
+            terminate_process_group(popen_proc)
+            raise TimeoutError(f"Command timed out after {timeout}s: {_quote_join(final_argv)}") from exc
+
+        for worker in threads:
+            worker.join()
+
+        result = CommandResult(
+            args=final_argv,
+            command_display=_quote_join(final_argv),
+            exit_code=exit_code,
+            stdout="".join(stdout_chunks),
+            stderr="".join(stderr_chunks),
+        )
+
     if check and not result.ok:
         raise CommandError(f"Command failed with exit code {result.exit_code}: {result.command_display}", result)
     return result

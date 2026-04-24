@@ -54,6 +54,60 @@ print(result.stdout.strip())
 `CommandResult.command_display` is the original Bash source for `run_bash`, while `args` reflects the actual argv passed
 to the process (e.g., `bash`, `-c`, script).
 
+## Streaming output for long-running commands
+
+By default, output is captured and returned at process end. For long-running operations, pass `stream_callback` to
+receive output incrementally while the child is still running.
+
+```python
+from py_bash_wrapper.bash_utils import run_bash
+
+def on_stream(stream_name: str, text: str) -> None:
+    print(f"[{stream_name}] {text}", end="")
+
+run_bash(
+    "for i in 1 2 3; do echo line-$i; sleep 1; done",
+    stream_callback=on_stream,
+    check=True,
+)
+```
+
+Notes:
+
+- Callback events are emitted per stream (`"stdout"` / `"stderr"`).
+- Ordering is guaranteed within each stream, not globally across both streams.
+
+## Write child stdout/stderr directly to files
+
+You can pass open file objects as `stdout`/`stderr` so the child writes directly to those files.
+
+```python
+from pathlib import Path
+
+from py_bash_wrapper.bash_utils import run_command
+
+log_dir = Path("logs")
+log_dir.mkdir(parents=True, exist_ok=True)
+
+with (log_dir / "stdout.log").open("w", encoding="utf-8") as out, (
+    log_dir / "stderr.log"
+).open("w", encoding="utf-8") as err:
+    result = run_command(["python", "--version"], stdout=out, stderr=err, check=True)
+    print(result.exit_code)  # 0
+    print(result.stdout)     # ""
+    print(result.stderr)     # ""
+```
+
+When a stream is routed to a file object, that stream is not captured into the returned `CommandResult`.
+
+## Combine callback and custom stdio
+
+If you pass both `stream_callback` and file objects:
+
+- Streams routed to `stdout`/`stderr` file objects are written directly by the child.
+- Callback events are emitted only for streams that are still captured by the wrapper.
+- This release does not implement tee mode (single stream to both callback and file sink).
+
 ## Errors: `check=True` and `CommandError`
 
 With `check=True`, a non-zero exit code raises `CommandError` and attaches the `CommandResult` on `exc.result`.

@@ -30,6 +30,8 @@
 * The **`run_command`** function provides no advances shell features likes pipes. This function takes in either a string
   or an argv list.
 * The **`run_bash`** function provides real Bash (e.g., pipes, redirects, globs, etc.). This function takes in a string.
+* Both functions support optional real-time streaming callbacks and file-object `stdout`/`stderr` passthrough for
+  long-running operations.
 
 Results come back as **`CommandResult`** with stdout, stderr, exit code, and an **`ok`** flag;
 The argument **`check=True`** will cause failures to raise a **`CommandError`**.
